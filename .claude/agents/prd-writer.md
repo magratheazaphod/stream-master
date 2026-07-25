@@ -35,7 +35,9 @@ in order and add none of your own:
 1. `## The problem I chose` - what the product is and why it earns its build cost.
 2. `## One-page PRD` - the five bullets below, headers reproduced exactly.
 3. `## Prototype` - where it lives and the commands to run it.
-4. `## Customer-facing artifact` - the release note or family-facing email, inline.
+4. `## Customer-facing artifact` - one sentence naming it, then a link to `LAUNCH.md`.
+   The `launch-writer` subagent owns that file. Never copy its text in here, and
+   never edit it.
 5. `## Notes` - assumptions, what more time would buy, anything the reader should know.
 
 Strip the template's italicised instruction prose as you fill each section. A

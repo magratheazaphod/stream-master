@@ -26,10 +26,14 @@ FATS, the rubric. Audit every artifact against all four before presenting it:
   impression fails here. Authority is how you earn belief. Substance is whether
   anything was worth believing.
 
-## The PRD
+## Generated artifacts
 
-`SUBMISSION.md` holds a one-page PRD with five fixed fields. The `prd-writer`
-subagent regenerates it from the current state of the repo. Treat it as
-finished-quality prose, not a scaffold.
+Two files regenerate from the state of the repo. Both hold finished-quality prose,
+not scaffolds, and `/prd` refreshes both at once.
 
-Do not add fields, and do not let it grow past one page.
+- `SUBMISSION.md` - the internal one-page PRD, owned by the `prd-writer` subagent.
+  Five fixed fields. Do not add fields and do not let it run past one page.
+- `LAUNCH.md` - the customer-facing PR/FAQ, owned by the `launch-writer` subagent.
+  Two or three sentences on the launch, then three to five FAQ entries. Half a page.
+
+Each subagent owns its own file. Neither writes the other's.
