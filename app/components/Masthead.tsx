@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { DatasetSource } from '@/lib/catalog';
 
 const links = [
   { href: '/', label: 'Landscape' },
+  { href: '/pause', label: 'Pause' },
   { href: '/watchlist', label: 'Watchlist' },
   { href: '/plan', label: 'Plan' },
 ];
@@ -22,7 +24,31 @@ function Owl() {
   );
 }
 
-export function Masthead() {
+/**
+ * Which dataset is on screen, stated on every page.
+ *
+ * Both states get a badge, not just the demo one. Naming only the demo case
+ * would leave real household spend looking like an unlabelled default, and the
+ * screenshot of real money mistaken for fiction is the worse of the two errors.
+ */
+function DatasetBadge({ dataset }: { dataset: DatasetSource }) {
+  const demo = dataset === 'demo';
+  return (
+    <span
+      className={`dataset ${demo ? 'demo' : 'private'}`}
+      title={
+        demo
+          ? 'Invented households and prices from lib/demo-data.ts. Nothing here is real.'
+          : 'Loaded from data/family.json, which is gitignored. Real household spend.'
+      }
+    >
+      <i className="dot" aria-hidden="true" />
+      {demo ? 'Demo data' : 'Family data'}
+    </span>
+  );
+}
+
+export function Masthead({ dataset }: { dataset: DatasetSource }) {
   const path = usePathname();
   return (
     <header className="masthead">
@@ -30,6 +56,7 @@ export function Masthead() {
         <Owl />
         stream<span>master</span>
       </Link>
+      <DatasetBadge dataset={dataset} />
       <nav>
         {links.map((l) => (
           <Link

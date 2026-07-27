@@ -2,6 +2,7 @@ import { getCatalog } from '@/lib/catalog';
 import {
   currentMonthlySpend,
   duplicates,
+  loadAvailability,
   localDate,
   rotationPlan,
   upcomingRenewals,
@@ -16,11 +17,12 @@ const sharingLabel: Record<string, string> = {
   'two-adults': 'Two adults',
 };
 
-export default function Landscape() {
+export default async function Landscape() {
   const c = getCatalog();
+  const snapshot = await loadAvailability(c);
   const monthly = currentMonthlySpend(c);
   const dupes = duplicates(c);
-  const plan = rotationPlan(c);
+  const plan = rotationPlan(c, snapshot);
   const renewals = upcomingRenewals(c, new Date('2026-07-25'), 30);
 
   const rows = c.subscriptions

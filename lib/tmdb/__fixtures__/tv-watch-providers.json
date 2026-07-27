@@ -1,0 +1,20 @@
+{
+  "id": 1396,
+  "results": {
+    "US": {
+      "link": "https://www.themoviedb.org/tv/1396-breaking-bad/watch?locale=US",
+      "flatrate": [
+        { "provider_id": 8, "provider_name": "Netflix", "logo_path": "/9A1JSVmSxsyaBK4SUFsYVqbAYfW.jpg", "display_priority": 0 }
+      ],
+      "buy": [
+        { "provider_id": 2, "provider_name": "Apple TV", "logo_path": "/peURlLlr8jggOwK53fJ5wdQl05y.jpg", "display_priority": 2 }
+      ]
+    },
+    "GB": {
+      "link": "https://www.themoviedb.org/tv/1396-breaking-bad/watch?locale=GB",
+      "flatrate": [
+        { "provider_id": 9, "provider_name": "Amazon Prime Video", "logo_path": "/emthp39XA2YScoYL1p0sdbAH2WA.jpg", "display_priority": 1 }
+      ]
+    }
+  }
+}

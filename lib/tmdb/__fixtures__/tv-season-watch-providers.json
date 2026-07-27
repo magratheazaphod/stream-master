@@ -1,0 +1,15 @@
+{
+  "id": 3572,
+  "results": {
+    "US": {
+      "link": "https://www.themoviedb.org/tv/1396-breaking-bad/season/1/watch?locale=US",
+      "buy": [
+        { "provider_id": 2, "provider_name": "Apple TV", "logo_path": "/peURlLlr8jggOwK53fJ5wdQl05y.jpg", "display_priority": 2 },
+        { "provider_id": 68, "provider_name": "Microsoft Store", "logo_path": "/pQFoyx7rp09CJTAb932F2g8Nlho.jpg", "display_priority": 5 }
+      ],
+      "rent": [
+        { "provider_id": 2, "provider_name": "Apple TV", "logo_path": "/peURlLlr8jggOwK53fJ5wdQl05y.jpg", "display_priority": 2 }
+      ]
+    }
+  }
+}

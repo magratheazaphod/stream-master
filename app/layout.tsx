@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Masthead } from './components/Masthead';
+import { getDatasetSource } from '@/lib/catalog';
 
 export const metadata: Metadata = {
   title: 'stream-master',
@@ -12,7 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <div className="shell">
-          <Masthead />
+          <Masthead dataset={getDatasetSource()} />
           {children}
         </div>
       </body>

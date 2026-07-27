@@ -40,8 +40,15 @@ venv/
 *.sqlite
 *.sqlite3
 *.db
-/data/
+
+# Real household data lives here and never gets committed. The directory's
+# contents are ignored rather than the directory itself, because git will not
+# re-include a file under an ignored directory. The example file is the one
+# exception and it holds nothing but placeholders.
+/data/*
+!/data/family.example.json
 
 # Next.js
 .next/
 next-env.d.ts
+tsconfig.tsbuildinfo

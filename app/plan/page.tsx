@@ -1,13 +1,22 @@
 import { getCatalog } from '@/lib/catalog';
-import { HORIZON_MONTHS, rotationPlan } from '@/lib/domain';
-import { MONTHS } from '@/lib/mock-data';
+import { HORIZON_MONTHS, MONTHS, loadAvailability, rotationPlan } from '@/lib/domain';
 
 const usd = (n: number) =>
   n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-export default function Plan() {
+const seasonList = (ns: number[]) =>
+  ns.length === 1 ? `season ${ns[0]}` : `seasons ${ns.join(', ')}`;
+
+/** A service can also carry no season we could check, which is worse than partial. */
+const shortfall = (service: string, carries: number[], missing: number[]) =>
+  carries.length === 0
+    ? `${service} is listed for the whole title, but no season we could check confirms it.`
+    : `${service} carries ${seasonList(carries)}. It does not carry ${seasonList(missing)}.`;
+
+export default async function Plan() {
   const c = getCatalog();
-  const plan = rotationPlan(c);
+  const snapshot = await loadAvailability(c);
+  const plan = rotationPlan(c, snapshot);
 
   const cellFor = (serviceId: string, month: number) =>
     plan.cells.find((x) => x.serviceId === serviceId && x.month === month);
@@ -126,6 +135,56 @@ export default function Plan() {
           </tbody>
         </table>
       </div>
+
+      {(plan.partial.length > 0 || plan.unplaced.length > 0) && (
+        <>
+          <h2>What this plan does not settle</h2>
+          <div className="card scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Problem</th>
+                </tr>
+              </thead>
+              <tbody>
+                {plan.partial.map((p) => (
+                  <tr key={`${p.title.id}-${p.service.id}`}>
+                    <td className="strong">{p.title.name}</td>
+                    <td className="dim">
+                      <span className="pill unsure">
+                        <i className="dot unsure" />
+                        runs out mid-series
+                      </span>{' '}
+                      {shortfall(p.service.name, p.carries, p.missing)}
+                    </td>
+                  </tr>
+                ))}
+                {plan.unplaced.map((u) => (
+                  <tr key={u.title.id}>
+                    <td className="strong">{u.title.name}</td>
+                    <td className="dim">
+                      <span className="pill unsure">
+                        <i className="dot unsure" />
+                        not scheduled
+                      </span>{' '}
+                      {u.reason === 'unknown-availability'
+                        ? 'No source could confirm where this streams, so the calendar leaves it out rather than guess.'
+                        : 'No subscription carries it. Renting or buying is the only way in.'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="note">
+            A whole-title answer is a union across seasons, so a service can appear to
+            carry a show and still drop it after season one. The plan schedules the
+            service that carries every season it could check, and says so here when no
+            such service exists.
+          </p>
+        </>
+      )}
 
       <h2>Nobody asked for these</h2>
       <div className="card scroll">

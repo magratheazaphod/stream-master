@@ -1,6 +1,5 @@
 import { getCatalog } from '@/lib/catalog';
-import { rankedWatchlist } from '@/lib/domain';
-import { MONTHS } from '@/lib/mock-data';
+import { MONTHS, loadAvailability, rankedWatchlist } from '@/lib/domain';
 
 const usd = (n: number) =>
   n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -11,9 +10,13 @@ const kindLabel: Record<string, string> = {
   buy: 'buy',
 };
 
-export default function Watchlist() {
+const seasonList = (ns: number[]) =>
+  ns.length === 0 ? 'none' : ns.length === 1 ? `season ${ns[0]}` : `seasons ${ns.join(', ')}`;
+
+export default async function Watchlist() {
   const c = getCatalog();
-  const list = rankedWatchlist(c);
+  const snapshot = await loadAvailability(c);
+  const list = rankedWatchlist(c, snapshot);
   const maxWant = Math.max(...list.map((v) => v.interestCount), 1);
 
   return (
@@ -60,6 +63,17 @@ export default function Watchlist() {
                 </td>
                 <td className="dim">{MONTHS[v.title.plannedMonth % 12]}</td>
                 <td>
+                  {v.unknownFor.length > 0 && (
+                    <div style={{ marginBottom: 4 }}>
+                      <span className="pill unsure">
+                        <i className="dot unsure" />
+                        not confirmed
+                      </span>{' '}
+                      <span className="dim" style={{ fontSize: 12.5 }}>
+                        for {v.unknownFor.map((p) => p.name).join(', ')}
+                      </span>
+                    </div>
+                  )}
                   {v.coveredFor.length > 0 && (
                     <div style={{ marginBottom: 4 }}>
                       <span className="pill covered">
@@ -82,9 +96,32 @@ export default function Watchlist() {
                       </span>
                     </div>
                   )}
+                  {v.discrepancies
+                    .filter((d) => d.kind !== 'season-only')
+                    .map((d) => (
+                      <div
+                        key={d.serviceId}
+                        className="dim"
+                        style={{ fontSize: 12.5, marginTop: 4 }}
+                      >
+                        {c.services.find((s) => s.id === d.serviceId)!.name}{' '}
+                        {d.kind === 'series-only'
+                          ? 'is listed for the series but for no season we could check'
+                          : `carries ${seasonList(d.carries)}, not ${seasonList(d.missing)}`}
+                      </div>
+                    ))}
+                  {v.unresolvedSeasons.length > 0 && (
+                    <div className="dim" style={{ fontSize: 12.5, marginTop: 4 }}>
+                      {seasonList(v.unresolvedSeasons)} came back blank
+                    </div>
+                  )}
                 </td>
                 <td>
-                  {v.uncoveredFor.length === 0 ? (
+                  {v.status === 'unknown' ? (
+                    <span className="dim">Nothing confirmed yet</span>
+                  ) : v.status === 'unavailable' ? (
+                    <span className="dim">Nothing carries it</span>
+                  ) : v.uncoveredFor.length === 0 ? (
                     <span className="dim">Nothing to buy</span>
                   ) : v.cheapest ? (
                     <>
@@ -118,9 +155,11 @@ export default function Watchlist() {
       </div>
 
       <p className="note">
-        Coverage is judged per household, because a subscription in Chicago does not
-        help anyone in Boston. Prices marked unknown are the gap a free availability
-        feed leaves: it names the provider without quoting the rental price.
+        Coverage is judged per household, because a subscription one household pays
+        for does not help anyone in another. Prices marked unknown are the gap a free availability
+        feed leaves: it names the provider without quoting the rental price. Not
+        confirmed means the source had nothing to say about a title, which is not the
+        same as nothing carrying it, and the list will never pretend otherwise.
       </p>
     </main>
   );
