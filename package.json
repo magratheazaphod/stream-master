@@ -12,7 +12,8 @@
     "auth:hash": "node scripts/hash-password.mjs",
     "db:seed:sql": "node scripts/seed-providers.mjs",
     "db:seed": "node scripts/seed-providers.mjs | psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1",
-    "prd:snapshot": "sh scripts/snapshot-prd.sh"
+    "prd:snapshot": "sh scripts/snapshot-prd.sh",
+    "env:fix": "node scripts/escape-env.mjs"
   },
   "dependencies": {
     "next": "^15.5.4",
