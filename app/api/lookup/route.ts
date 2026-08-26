@@ -16,6 +16,6 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const query = new URL(request.url).searchParams.get('q') ?? '';
-  const answer = await lookupShow({ client: tmdbClient, catalog: getCatalog() }, query);
+  const answer = await lookupShow({ client: tmdbClient, catalog: await getCatalog() }, query);
   return NextResponse.json(answer);
 }

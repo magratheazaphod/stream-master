@@ -6,7 +6,7 @@
  * needs no database driver and the output can be read before it is run:
  *
  *   npm run db:seed:sql                     # inspect
- *   npm run db:seed                         # apply via psql "$DATABASE_URL"
+ *   npm run db:seed                         # apply, via scripts/db-seed.ts
  *
  * Two passes, because canonical_provider_id points at another row in the same
  * table and a single ordered insert would make the seed file's ordering
@@ -53,6 +53,11 @@ function bool(value) {
   return value ? 'TRUE' : 'FALSE';
 }
 
+/**
+ * The seed SQL, as text. Exported so `scripts/db-seed.ts` can apply it without
+ * a second implementation and without a shell pipeline in between.
+ */
+export function providerSeedSql() {
 const seed = JSON.parse(readFileSync(seedPath, 'utf8'));
 const providers = seed.providers ?? [];
 
@@ -123,4 +128,10 @@ out.push('');
 out.push('COMMIT;');
 out.push('');
 
-process.stdout.write(out.join('\n'));
+return out.join('\n');
+}
+
+// Printing only when run directly, so importing this module has no side effect.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  process.stdout.write(providerSeedSql());
+}

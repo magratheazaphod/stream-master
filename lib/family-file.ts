@@ -62,7 +62,7 @@ export class FamilyFileError extends Error {
     super(
       `Refused to load private family data from ${path}. ` +
         `The app will not fall back to demo data, because you could not then tell ` +
-        `which dataset you were looking at. Fix the file or remove it.\n` +
+        `which dataset you were looking at. Fix it or remove it.\n` +
         faults.map((f) => `  - ${f}`).join('\n'),
     );
     this.name = 'FamilyFileError';

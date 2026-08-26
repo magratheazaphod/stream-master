@@ -136,6 +136,18 @@ describe('what the screen may say', () => {
     expect(pauseStateFor('sub-7', queue, []).progress).toBe('requested');
   });
 
+  // The hosted app cannot reach Cowork. A request waits in Postgres until the
+  // sync job on the Mac takes it, and a family told "with the agent" while the
+  // Mac sleeps is being told somebody is standing by when nobody is.
+  it('separates a request nothing has picked up from one an agent can see', () => {
+    expect(pauseStateFor('sub-7', queue, [], () => true).progress).toBe('in-flight');
+    expect(pauseStateFor('sub-7', queue, [], () => false).progress).toBe('requested');
+  });
+
+  it('assumes nothing has picked a request up when nobody says otherwise', () => {
+    expect(pauseStateFor('sub-7', queue, []).progress).toBe('requested');
+  });
+
   it('confirms only on a done carrying the evidence the agent read', () => {
     const results: PauseResult[] = [
       { requestId: id, outcome: 'done', observedAt: '2026-08-26T14:38:12Z', evidence: 'Membership ends September 14' },

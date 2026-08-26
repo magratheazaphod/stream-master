@@ -2,15 +2,17 @@
  * Where this process is running, and what it is therefore allowed to promise.
  *
  * On Vercel the deployment bundle is read-only and the one writable directory,
- * `/tmp`, is per-instance and evaporates. Both of this app's stores are files:
- * `data/family.json` and `data/pause-queue.json`. Neither survives there.
+ * `/tmp`, is per-instance and evaporates. The file store writes
+ * `data/family.json` and `data/pause-queue.json`, and neither survives there.
  *
- * Fixing that is the database migration, which is separate work. What this
- * module exists to prevent is the failure in between: a family member presses
- * Pause, the write throws an EROFS deep inside `writeFileAtomic`, and the screen
- * shows either a stack trace or, worse, nothing at all. A button that silently
- * does nothing is the one outcome this product cannot afford, because the whole
- * proposition is that the app tells the truth about what it did.
+ * Postgres fixed that, so the refusal this module powers now fires only where a
+ * hosted deployment has no database configured - a preview without the
+ * integration linked, or a connection string somebody removed. The failure it
+ * exists to prevent is unchanged: a family member presses Pause, the write
+ * throws an EROFS deep inside `writeFileAtomic`, and the screen shows either a
+ * stack trace or, worse, nothing at all. A button that silently does nothing is
+ * the one outcome this product cannot afford, because the whole proposition is
+ * that the app tells the truth about what it did.
  */
 
 import type { Env } from './auth/config';
@@ -26,4 +28,4 @@ export function isEphemeralFilesystem(env: Env = process.env): boolean {
  * deserves to know that rather than press the button again.
  */
 export const EPHEMERAL_WRITE_MESSAGE =
-  'This copy runs on Vercel, where the app cannot save anything to disk. Nothing was recorded and nothing was queued. Pausing works on a local copy until the database lands.';
+  'This copy runs on Vercel with no database configured, and Vercel keeps nothing the app writes to disk. Nothing was recorded and nothing was queued. Link the Postgres integration, or run it locally.';

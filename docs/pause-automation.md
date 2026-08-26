@@ -53,6 +53,31 @@ wrong place.
 asleep waits, and the UI must say so rather than implying an agent is standing by.
 `requested` and `in flight` are different states and the family can tell them apart.
 
+### The sync job, as built
+
+`npm run pause:sync`, in `scripts/pause-sync.mts`. A script and not a route: a route
+would need the Mac reachable from the internet, which is the arrangement this design
+exists to avoid. It runs two directions each time, pull before push, so a run that
+dies between them has handed work out rather than lost an answer.
+
+- **Pull.** Approved requests with no `handed_off_at` go into `data/pause-queue.json`,
+  and only then is the stamp written. Stamping first and failing to write would leave
+  a request marked as handed off to a file that does not carry it, and nothing would
+  pick it up again.
+- **Push.** The whole of `data/pause-results.json` goes up on every run. Cowork
+  appends to that file and never trims it, so the repeat is expected and a unique
+  index on the request, the outcome and the observed instant makes it a no-op. A
+  result naming a request the database has never seen is dropped rather than
+  invented.
+
+`handed_off_at` is what the screen reads. Null is `Requested, not picked up`. A
+timestamp is `With the agent`. The column never reaches the queue file - adding a
+field to the contract would make Cowork aware of a machine it has no business
+knowing about, which is the failure this whole arrangement is shaped to avoid.
+
+Nothing schedules the job yet. Until something does, somebody runs it by hand, and a
+pause sits in Postgres until they do.
+
 Two corollaries that follow directly:
 
 - **Cowork runs no git commands in this repo.** Local git needs no network, so

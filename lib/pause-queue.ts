@@ -169,7 +169,8 @@ export function appendRequest(
  */
 export type PauseProgress =
   | 'none' // nobody has asked
-  | 'requested' // written to the queue, Cowork has not run
+  | 'requested' // recorded, and no agent can see it yet
+  | 'in-flight' // in the queue file, waiting on Cowork's next run
   | 'confirmed' // done, with the confirmation text the agent read
   | 'unconfirmed' // done or already, but no evidence came with it
   | 'needs-a-person' // blocked: a CAPTCHA, a re-auth, an unexpected screen
@@ -192,17 +193,27 @@ export function latestResultFor(results: PauseResult[], id: string): PauseResult
  * Reads the queue and the results together, because either alone lies: a request
  * with no result reads as done if you only look at the queue, and a stale result
  * reads as current if you only look at the results.
+ *
+ * `handedOff` is the third input and it exists because the hosted app cannot
+ * reach Cowork directly. A request sits in Postgres until the sync job on
+ * Jesse's Mac pulls it into the queue file, and if the Mac is asleep it sits
+ * there for hours. Until it moves, nothing is going to happen and the screen
+ * says so. The default answers no, which is the safe reading: a caller that
+ * cannot say whether a request reached an agent must not imply one is standing
+ * by. The file store answers yes for everything in the queue, because writing
+ * that file is the handoff.
  */
 export function pauseStateFor(
   subscriptionId: string,
   queue: PauseQueueFile,
   results: PauseResult[],
+  handedOff: (requestId: string) => boolean = () => false,
 ): PauseState {
   const request = queue.requests.filter((r) => r.subscriptionId === subscriptionId).at(-1);
   if (!request) return { progress: 'none' };
 
   const result = latestResultFor(results, request.id);
-  if (!result) return { progress: 'requested', request };
+  if (!result) return { progress: handedOff(request.id) ? 'in-flight' : 'requested', request };
 
   const progress: PauseProgress =
     result.outcome === 'done' || result.outcome === 'already'

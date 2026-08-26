@@ -2,169 +2,56 @@
  * Where the app gets its data, and the only place that decides which dataset it
  * is running on.
  *
- * The repository holds the shape. It never holds the instance. Real household
- * data lives in `data/family.json`, outside the tree and gitignored, and the
- * committed demo dataset stands in when that file is absent.
- */
-
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { MockAvailabilityProvider } from './availability';
-import {
-  demoAvailability,
-  households,
-  interests,
-  people,
-  services,
-  subscriptions,
-  titles,
-} from './demo-data';
-import {
-  parseFamilyFile,
-  withSubscriptionStatus,
-  writeFamilyFile,
-  type SubscriptionStatusChange,
-} from './family-file';
-import type { Catalog } from './domain';
-import type { CountryCode, Subscription } from './types';
-
-/**
- * The family is US-only today. Named here rather than assumed anywhere, so the
- * day a household moves the change lands in one place.
- */
-export const DEFAULT_COUNTRY: CountryCode = 'US';
-
-/** The private file. Gitignored, and the only place real data may sit. */
-export const FAMILY_DATA_PATH = join(process.cwd(), 'data', 'family.json');
-
-/** Which dataset the app is running on. Rendered in the masthead on every page. */
-export type DatasetSource = 'demo' | 'private';
-
-export interface LoadedCatalog {
-  source: DatasetSource;
-  /** Where the private data came from, for the error message and for the UI. */
-  path: string | null;
-  catalog: Catalog;
-}
-
-/**
- * Load the catalog and say where it came from.
+ * There are two stores now, a file and a Postgres database, and this module is
+ * the door in front of both. It knows which one it has - `lib/store/` decides
+ * that - and it knows nothing about how either works. No path, no table and no
+ * query appears above this line.
  *
- * Three outcomes, and only three. No private file gives demo data. A private
- * file that checks out gives real data. A private file that does not throws,
- * and never degrades to demo, because a reader who cannot tell the two apart
- * will eventually publish the wrong one.
+ * What does not change with the backend is the rule. Three outcomes, and only
+ * three: no private data gives the demo dataset, private data that checks out
+ * gives the real one, and private data that does not throws and never degrades
+ * to demo. It is a safety property rather than a convenience, and it matters
+ * more with two stores than it did with one, because there are now two ways for
+ * a reader to lose track of which family they are looking at.
  */
-export function loadCatalog(path: string = FAMILY_DATA_PATH): LoadedCatalog {
-  let text: string;
-  try {
-    text = readFileSync(path, 'utf8');
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return demoCatalog();
-    // Present but unreadable - a permissions problem or a directory in its place.
-    // Still not a reason to pretend the demo dataset is what was asked for.
-    throw e;
-  }
 
-  const family = parseFamilyFile(text, path);
-  return {
-    source: 'private',
-    path,
-    catalog: {
-      households: family.households,
-      people: family.people,
-      services: family.services,
-      subscriptions: family.subscriptions,
-      titles: family.titles,
-      interests: family.interests,
-      availability: new MockAvailabilityProvider(family.availability),
-      country: family.country,
-    },
-  };
-}
+import { getStore } from './store';
+import type { SubscriptionStatusChange } from './family-file';
+import type { Catalog } from './domain';
 
-function demoCatalog(): LoadedCatalog {
-  return {
-    source: 'demo',
-    path: null,
-    catalog: {
-      households,
-      people,
-      services,
-      subscriptions,
-      titles,
-      interests,
-      availability: new MockAvailabilityProvider(demoAvailability),
-      country: DEFAULT_COUNTRY,
-    },
-  };
-}
+export { DEFAULT_COUNTRY } from './store/types';
+export { FAMILY_DATA_PATH, loadCatalogFromFile } from './store/file';
+export type { DatasetSource, LoadedCatalog, StatusWriteResult } from './store/types';
 
 /**
- * The single place the app reads its data. Swapping the private file for a
- * database means changing `loadCatalog` and nothing else.
+ * Load the catalogue and say where it came from.
+ *
+ * The synchronous file reader it replaced is still exported as
+ * `loadCatalogFromFile`, because the file's own behaviour is worth testing on
+ * its own terms. This is what the pages call.
  */
-export function getCatalog(): Catalog {
-  return loadCatalog().catalog;
+export function loadCatalog() {
+  return getStore().load();
+}
+
+/** The single place the app reads its data. */
+export async function getCatalog(): Promise<Catalog> {
+  return (await loadCatalog()).catalog;
 }
 
 /** The provenance alone, for the indicator every page carries. */
-export function getDatasetSource(): DatasetSource {
-  return loadCatalog().source;
-}
-
-/* --------------------------------------------------------------------------
- * Writing back.
- *
- * The same rule that governs reading governs writing, and in the same place.
- * Only the private file is a real store. The demo dataset is a fixture compiled
- * into the bundle, and a toggle pressed against it must never conjure a
- * `data/family.json` - a file that appears by accident is a file nobody can tell
- * apart from real household data later.
- * ----------------------------------------------------------------------- */
-
-/** What a toggle actually achieved, in the terms the screen has to report. */
-export interface StatusWriteResult {
-  source: DatasetSource;
-  /** False on demo data. The change is real for this session and nothing more. */
-  persisted: boolean;
-  subscription: Subscription;
+export async function getDatasetSource() {
+  return (await loadCatalog()).source;
 }
 
 /**
  * Pause or resume one subscription, and say whether it survived the request.
  *
- * On private data the whole file is re-checked and rewritten atomically, so a
- * refusal leaves the previous file exactly as it was. On demo data nothing is
- * written and `persisted` is false, which the screen states rather than hides.
+ * Both stores refuse the same changes and both leave the previous state intact
+ * when they refuse. Neither writes anything against the demo dataset: it is a
+ * fixture, and a toggle pressed on it must never conjure a household row or a
+ * `data/family.json` that nobody can tell apart from real data later.
  */
-export function setSubscriptionStatus(
-  change: SubscriptionStatusChange,
-  path: string = FAMILY_DATA_PATH,
-): StatusWriteResult {
-  const loaded = loadCatalog(path);
-
-  if (loaded.source === 'demo') {
-    const sub = loaded.catalog.subscriptions.find((s) => s.id === change.subscriptionId);
-    if (!sub) throw new Error(`No subscription "${change.subscriptionId}" in the demo dataset.`);
-    return { source: 'demo', persisted: false, subscription: applyToRow(sub, change) };
-  }
-
-  const file = parseFamilyFile(readFileSync(path, 'utf8'), path);
-  const next = withSubscriptionStatus(file, change);
-  writeFamilyFile(path, next);
-  return {
-    source: 'private',
-    persisted: true,
-    subscription: next.subscriptions.find((s) => s.id === change.subscriptionId)!,
-  };
-}
-
-/** The in-memory equivalent, for the demo dataset the app may not write to. */
-function applyToRow(sub: Subscription, change: SubscriptionStatusChange): Subscription {
-  const { status: _s, pausedOn: _p, resumeBy: _r, ...rest } = sub;
-  if (change.status === 'active') return { ...rest, status: 'active' };
-  const paused: Subscription = { ...rest, status: 'paused', pausedOn: change.pausedOn };
-  if (change.resumeBy !== undefined) paused.resumeBy = change.resumeBy;
-  return paused;
+export function setSubscriptionStatus(change: SubscriptionStatusChange) {
+  return getStore().setSubscriptionStatus(change);
 }

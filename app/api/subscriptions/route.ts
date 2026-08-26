@@ -9,21 +9,15 @@
  */
 
 import { NextResponse } from 'next/server';
-import { loadCatalog, setSubscriptionStatus, FAMILY_DATA_PATH } from '@/lib/catalog';
+import { getStore } from '@/lib/store';
+import { pauseStateFrom } from '@/lib/store/pause-state';
 import { EPHEMERAL_WRITE_MESSAGE, isEphemeralFilesystem } from '@/lib/deployment';
-import {
-  appendRequest,
-  pauseStateFor,
-  readQueue,
-  readResults,
-  requestId,
-  type PauseRequest,
-  type PauseState,
-} from '@/lib/pause-queue';
+import { hasDatabase } from '@/lib/store/db';
+import { requestId, type PauseRequest, type PauseState } from '@/lib/pause-queue';
 import type { PauseAction } from '@/lib/pause-queue';
 import type { Subscription } from '@/lib/types';
 
-/** The dataset is a file on disk, so nothing on this route may be cached. */
+/** The dataset changes under the app, so nothing on this route may be cached. */
 export const dynamic = 'force-dynamic';
 
 /**
@@ -71,17 +65,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const { catalog, source } = loadCatalog();
+  const store = getStore();
+  const { catalog, source } = await store.load();
   const sub = catalog.subscriptions.find((s) => s.id === subscriptionId);
   if (!sub) {
     return NextResponse.json({ error: `No subscription "${subscriptionId}".` }, { status: 404 });
   }
 
-  // Refuse before writing, not after failing. On Vercel the bundle is read-only
-  // and /tmp does not outlive the instance, so every store this route touches is
-  // a store that forgets. Say that plainly rather than let the family read a
-  // filesystem error, or worse, watch the button do nothing.
-  if (isEphemeralFilesystem()) {
+  // Refuse before writing, not after failing. A hosted deployment with no
+  // database configured has nowhere to put this: the bundle is read-only and
+  // /tmp does not outlive the instance, so every store it could reach is a store
+  // that forgets. Say that plainly rather than let the family read a filesystem
+  // error, or worse, watch the button do nothing. With Postgres configured this
+  // no longer fires, which is the whole point of the migration.
+  if (isEphemeralFilesystem() && !hasDatabase()) {
     return NextResponse.json({ error: EPHEMERAL_WRITE_MESSAGE }, { status: 503 });
   }
 
@@ -92,7 +89,7 @@ export async function POST(request: Request) {
 
   let written;
   try {
-    written = setSubscriptionStatus(
+    written = await store.setSubscriptionStatus(
       action === 'pause'
         ? {
             subscriptionId,
@@ -101,10 +98,9 @@ export async function POST(request: Request) {
             resumeBy: iso(addMonths(now, service.pause?.maxPauseMonths ?? DEFAULT_PAUSE_MONTHS)),
           }
         : { subscriptionId, status: 'active' },
-      FAMILY_DATA_PATH,
     );
   } catch (e) {
-    // The write refused, which means the file on disk is untouched. Say so: a
+    // The write refused, which means the stored row is untouched. Say so: a
     // silent failure here would leave the screen showing a pause that is not
     // recorded anywhere.
     return NextResponse.json(
@@ -165,7 +161,7 @@ export async function POST(request: Request) {
 
   let queueNote: string | undefined;
   try {
-    appendRequest(queued, undefined, now);
+    await store.queuePauseRequest(queued);
   } catch (e) {
     queueNote = `The change is recorded, but the queue was not written: ${(e as Error).message}`;
   }
@@ -175,7 +171,7 @@ export async function POST(request: Request) {
     persisted: written.persisted,
     pause: queueNote
       ? { progress: 'none' }
-      : pauseStateFor(subscriptionId, readQueue(), readResults()),
+      : pauseStateFrom(subscriptionId, await store.pauseSnapshot()),
     ...(queueNote ? { queueNote } : {}),
   };
   return NextResponse.json(response);

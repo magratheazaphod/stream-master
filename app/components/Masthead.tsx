@@ -31,7 +31,7 @@ function DatasetBadge({ dataset }: { dataset: DatasetSource }) {
       title={
         demo
           ? 'Invented households and prices from lib/demo-data.ts. Nothing here is real.'
-          : 'Loaded from data/family.json, which is gitignored. Real household spend.'
+          : 'Loaded from the family tables in Postgres, or data/family.json on a laptop. Real household spend.'
       }
     >
       <i className="dot" aria-hidden="true" />

@@ -12,7 +12,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { setSubscriptionStatus } from './catalog';
+import { setSubscriptionStatusInFile as setSubscriptionStatus } from './store/file';
 import {
   FamilyFileError,
   parseFamilyFile,

@@ -11,10 +11,13 @@ accounts. The password lives in Vercel as a scrypt digest, so nobody reading the
 dashboard - including anybody you later add to the project - can sign in with
 what they see there.
 
-The deployed app runs on **demo data**. `data/family.json` holds real household
-spend, it is gitignored, and it must stay that way, so it never reaches the
-build. The screen says "Demo data" in the masthead, which is the point of that
-badge. Real numbers arrive with the database work, not before.
+The deployed app reads real household spend out of **Postgres**, provisioned
+from the Vercel Marketplace and injected into every environment. Nothing real is
+in the repository and nothing real reaches the build: `data/family.json` is
+gitignored, it is the machine-local copy, and `npm run db:import` is what carries
+it into the database. The masthead says which dataset is on screen either way,
+which is the point of that badge - a deployment with no database configured
+still runs on the invented demo dataset and says so.
 
 ## 1. Generate the two secrets
 
@@ -47,7 +50,9 @@ Read "The rate limit" below before you choose something shorter.
 ## 3. Set the environment variables
 
 In **Settings -> Environment Variables**, add three. Tick Production, Preview and
-Development for each unless a row says otherwise.
+Development for each unless a row says otherwise. The Postgres variables are not
+in this table: the Marketplace integration writes them itself, into every
+environment, and there is nothing to paste.
 
 | Variable | What to put in it |
 | --- | --- |
@@ -62,7 +67,9 @@ message naming the variable. That is deliberate. An auth gate that falls back to
 open on a missing variable is worse than no gate, because it looks locked.
 
 Copy the same three into `.env.local` on your laptop, which is gitignored, or run
-`vercel env pull`.
+`vercel env pull` - which brings the Postgres variables down too. **Run `npm run
+env:fix` after any pull.** The pull strips the escaping the password digest needs
+and the gate then refuses every request.
 
 ## 4. Check it
 
@@ -95,23 +102,23 @@ The upgrade is a shared counter - Upstash Redis from the Vercel Marketplace, or
 the database this project is heading towards anyway. It is deliberately not a
 dependency today.
 
-## What does not work on Vercel
+## What still needs a machine at home
 
-**Pause and resume.** Both stores are files: `data/family.json` and
-`data/pause-queue.json`. On Vercel the deployment bundle is read-only and `/tmp`
-is per-instance and evaporates, so nothing written survives the request.
+**Pause and resume work on Vercel.** The write goes to Postgres, the request goes
+to the `pause_requests` table, and both survive the function that wrote them. A
+deployment with no connection string configured still refuses before writing,
+with a message saying nothing was recorded and nothing was queued, because a
+button that silently fails is the worst outcome this product can produce.
 
-The app detects this and refuses before writing, with a message that says nothing
-was recorded and nothing was queued. It does not throw a filesystem error at the
-family and it does not quietly do nothing. A button that silently fails is the
-worst outcome this product can produce, so the refusal is explicit and tested.
+**Execution still happens on Jesse's Mac.** Cowork drives a signed-in browser and
+no server has one, so `npm run pause:sync` carries approved requests down into
+`data/pause-queue.json` and pushes results back up. Cowork's file contract is
+unchanged and it never learns a database exists. See `docs/pause-automation.md`.
 
-Pause works on a local copy today. It works everywhere once the database lands.
-
-**The Cowork seam.** `lib/pause-queue.ts` talks to Claude Cowork through files in
-`data/`. Cowork runs on Jesse's Mac. The hosted copy and Cowork share no
-filesystem, so the seam simply does not exist in production. Same fix: the
-database.
+The consequence is on screen. A pause requested while the Mac is asleep reads
+`Requested, not picked up` until the sync job runs, and `With the agent` after.
+The family can tell the two apart, which is the whole reason the states are
+separate.
 
 ## Preview deploys versus production
 
@@ -146,7 +153,7 @@ near-zero traffic, so nothing on Hobby's bandwidth or function-invocation budget
 is in play. Node 24 is the default runtime and the default function timeout is
 300 seconds, both far beyond what a TMDB lookup needs.
 
-## When the database lands
+## The database
 
 Databases come through the **Vercel Marketplace** now, not a first-party Vercel
 Postgres product - that no longer exists. Supabase is on the Marketplace, so the
@@ -155,7 +162,12 @@ project, and Vercel injects the connection variables into every environment
 itself. There is no connection string to copy around by hand and no separate
 Supabase project to keep in sync.
 
-At that point `loadCatalog` in `lib/catalog.ts` changes and nothing else does.
-That is what the function is for. Pause and resume start working on the hosted
-copy, real household data stops depending on a file that must never be committed,
-and the masthead badge finally reads "Family data" in production.
+That is done. The app reads through a seam in `lib/store/`: a connection string
+means Postgres, its absence means `data/family.json`, and `lib/catalog.ts` cannot
+tell which it got. `STREAM_MASTER_STORE=file` forces the file path for local
+work.
+
+Two commands carry the data. `npm run db:import` loads `data/family.json` into
+Postgres and is idempotent, so running it after an edit updates the rows rather
+than duplicating them. `npm run db:seed` populates the provider directory.
+Neither needs `psql` and both read the connection from `.env.local`.

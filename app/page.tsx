@@ -1,31 +1,22 @@
-import { loadCatalog } from '@/lib/catalog';
-import { pauseStateFor, readQueue, readResults } from '@/lib/pause-queue';
+import { getStore } from '@/lib/store';
+import { pauseStateFrom } from '@/lib/store/pause-state';
 import { ShowLookup } from './components/ShowLookup';
 import { Subscriptions, type Row } from './components/Subscriptions';
 
-/** The dataset and both Cowork files are files on disk. Read them every request. */
+/** The dataset and the pause queue both change under the app. Read every request. */
 export const dynamic = 'force-dynamic';
 
-export default function Home() {
-  const { catalog, source } = loadCatalog();
-
-  // Read the queue defensively. A malformed one is a real possibility - the other
-  // side of the seam writes results, and a hand edit is always available - and a
-  // broken file must not take the whole screen down.
-  let queue;
-  try {
-    queue = readQueue();
-  } catch {
-    queue = { version: 1, writtenAt: new Date(0).toISOString(), requests: [] };
-  }
-  const results = readResults();
+export default async function Home() {
+  const store = getStore();
+  const { catalog, source } = await store.load();
+  const snapshot = await store.pauseSnapshot();
 
   const rows: Row[] = catalog.subscriptions
     .map((sub) => {
       const service = catalog.services.find((s) => s.id === sub.serviceId)!;
       const household = catalog.households.find((h) => h.id === sub.householdId)!;
       const payer = catalog.people.find((p) => p.id === sub.payerId)!;
-      const state = pauseStateFor(sub.id, queue, results);
+      const state = pauseStateFrom(sub.id, snapshot);
       const row: Row = {
         id: sub.id,
         serviceName: service.name,

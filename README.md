@@ -10,14 +10,15 @@ This repository is public. It holds the shape of the problem, never anybody's
 instance of it. The committed dataset in `lib/demo-data.ts` is invented down to the
 last household, and the app renders it whenever nothing else is present.
 
-Real family data lives in `data/family.json`, outside version control. `git` ignores
-everything under `data/` except the example, so the private file cannot reach a
-commit by accident. Copy `data/family.example.json`, fill it in and reload.
+Real family data lives in Postgres, or in `data/family.json` outside version
+control. `git` ignores everything under `data/` except the example, so the private
+file cannot reach a commit by accident. Copy `data/family.example.json`, fill it in
+and reload, then `npm run db:import` when it is ready to go up.
 
-Three outcomes, and only three. No private file gives the demo dataset. A valid
-private file gives the real one. A private file that is malformed, partial or
-internally inconsistent throws on load, naming every fault, and the app never falls
-back. Silent fallback is the failure worth engineering against, because a reader who
+Three outcomes, and only three, and they hold on both stores. No private data gives
+the demo dataset. Private data that checks out gives the real one. Private data that
+is malformed, partial or internally inconsistent throws on load, naming every fault,
+and the app never falls back. Silent fallback is the failure worth engineering against, because a reader who
 cannot tell the two datasets apart eventually publishes the wrong one. For the same
 reason the masthead states which dataset is loaded on every page.
 

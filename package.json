@@ -11,12 +11,15 @@
     "docs": "node scripts/render-html.mjs",
     "auth:hash": "node scripts/hash-password.mjs",
     "db:seed:sql": "node scripts/seed-providers.mjs",
-    "db:seed": "node scripts/seed-providers.mjs | psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1",
+    "db:seed": "tsx scripts/db-seed.mts",
+    "db:import": "tsx scripts/import-family.mts",
+    "pause:sync": "tsx scripts/pause-sync.mts",
     "prd:snapshot": "sh scripts/snapshot-prd.sh",
     "env:fix": "node scripts/escape-env.mjs"
   },
   "dependencies": {
     "next": "^15.5.4",
+    "postgres": "3.4.9",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
@@ -25,6 +28,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "marked": "^18.0.7",
+    "tsx": "4.23.12",
     "typescript": "^5.8.3",
     "vitest": "^3.1.4"
   }

@@ -11,7 +11,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { loadCatalog } from './catalog';
+import { loadCatalogFromFile as loadCatalog } from './catalog';
 import { FamilyFileError, parseFamilyFile } from './family-file';
 import { people as demoPeople } from './demo-data';
 

@@ -8,12 +8,12 @@ export const metadata: Metadata = {
   description: 'What the family pays for, what it wants to watch and when to turn each service on.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
         <div className="shell">
-          <Masthead dataset={getDatasetSource()} />
+          <Masthead dataset={await getDatasetSource()} />
           {children}
         </div>
       </body>

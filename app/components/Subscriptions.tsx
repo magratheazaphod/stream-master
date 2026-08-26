@@ -49,8 +49,14 @@ function statusPill(row: Row) {
   switch (row.progress) {
     case 'confirmed':
       return <span className="pill covered"><i className="dot good" />Billing stopped</span>;
+    // Two states, not one, and the difference is a machine. A request lives in
+    // the database until the sync job on Jesse's Mac picks it up, and if the Mac
+    // is asleep it lives there for hours. Saying "with the agent" while nothing
+    // can see it would imply somebody is standing by when nobody is.
     case 'requested':
-      return <span className="pill unsure"><i className="dot unsure" />Pause requested</span>;
+      return <span className="pill unsure"><i className="dot unsure" />Requested, not picked up</span>;
+    case 'in-flight':
+      return <span className="pill unsure"><i className="dot unsure" />With the agent</span>;
     case 'unconfirmed':
       return <span className="pill unsure"><i className="dot unsure" />Reported done, no evidence</span>;
     case 'needs-a-person':
@@ -162,6 +168,12 @@ export function Subscriptions({
               </div>
               {row.status === 'paused' && row.resumeBy && (
                 <div className="because dim">Due back {row.resumeBy}</div>
+              )}
+              {row.progress === 'requested' && (
+                <div className="because dim">
+                  Waiting for the Mac that runs the agent. Nothing happens until it wakes
+                  up and takes the job.
+                </div>
               )}
               {row.status === 'paused' && row.evidence && (
                 <div className="because dim">{row.evidence}</div>
