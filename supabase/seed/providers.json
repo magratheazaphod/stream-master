@@ -1,0 +1,244 @@
+{
+  "_comment": [
+    "Seed snapshot for the providers table. Two kinds of field live here.",
+    "Directory fields (name, logo_path, display_priority, display_priorities,",
+    "in_tv_directory, in_movie_directory) mirror TMDB's /watch/providers/{tv,movie}",
+    "and a later refresh may overwrite them freely.",
+    "Editorial fields (kind, canonical_provider_id, notes) are stream-master's own",
+    "judgment. TMDB reports neither. A refresh must never overwrite them.",
+    "",
+    "provider_id values were written from recall, not from a live directory call -",
+    "Stage 1 makes no TMDB requests. Reconcile them against /watch/providers/tv and",
+    "/watch/providers/movie before trusting any planner output built on them.",
+    "logo_path is left null for the same reason; the refresh fills it."
+  ],
+  "providers": [
+    {
+      "provider_id": 8,
+      "name": "Netflix",
+      "display_priority": 0,
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription"
+    },
+    {
+      "provider_id": 1796,
+      "name": "Netflix Standard with Ads",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription",
+      "canonical_provider_id": 8,
+      "notes": "Same catalogue, cheaper tier. One subscription decision with Netflix."
+    },
+    {
+      "provider_id": 9,
+      "name": "Amazon Prime Video",
+      "display_priority": 1,
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription"
+    },
+    {
+      "provider_id": 119,
+      "name": "Amazon Prime Video with Ads",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription",
+      "canonical_provider_id": 9
+    },
+    {
+      "provider_id": 15,
+      "name": "Hulu",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription"
+    },
+    {
+      "provider_id": 337,
+      "name": "Disney Plus",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription"
+    },
+    {
+      "provider_id": 350,
+      "name": "Apple TV Plus",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription"
+    },
+    {
+      "provider_id": 1899,
+      "name": "Max",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription"
+    },
+    {
+      "provider_id": 384,
+      "name": "HBO Max",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription",
+      "canonical_provider_id": 1899,
+      "notes": "Legacy entry for the same service under its former name."
+    },
+    {
+      "provider_id": 531,
+      "name": "Paramount Plus",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription"
+    },
+    {
+      "provider_id": 1770,
+      "name": "Paramount Plus with Showtime",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription",
+      "canonical_provider_id": 531
+    },
+    {
+      "provider_id": 582,
+      "name": "Paramount Plus Apple TV Channel",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "channel_reseller",
+      "canonical_provider_id": 531,
+      "notes": "Stage 0: the six Paramount+ SKUs contributed six splits describing one fact."
+    },
+    {
+      "provider_id": 633,
+      "name": "Paramount Plus Amazon Channel",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "channel_reseller",
+      "canonical_provider_id": 531
+    },
+    {
+      "provider_id": 386,
+      "name": "Peacock Premium",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription"
+    },
+    {
+      "provider_id": 387,
+      "name": "Peacock Premium Plus",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription",
+      "canonical_provider_id": 386
+    },
+    {
+      "provider_id": 526,
+      "name": "AMC Plus",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription"
+    },
+    {
+      "provider_id": 43,
+      "name": "Starz",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription"
+    },
+    {
+      "provider_id": 283,
+      "name": "Crunchyroll",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "subscription"
+    },
+    {
+      "provider_id": 257,
+      "name": "fuboTV",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "live_tv_bundle",
+      "notes": "Live-TV bundles were half the raw provider-season splits in the Stage 0 spike."
+    },
+    {
+      "provider_id": 363,
+      "name": "YouTube TV",
+      "in_tv_directory": true,
+      "in_movie_directory": false,
+      "kind": "live_tv_bundle"
+    },
+    {
+      "provider_id": 299,
+      "name": "Sling TV",
+      "in_tv_directory": true,
+      "in_movie_directory": false,
+      "kind": "live_tv_bundle"
+    },
+    {
+      "provider_id": 73,
+      "name": "Tubi TV",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "free_ads"
+    },
+    {
+      "provider_id": 300,
+      "name": "Pluto TV",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "free_ads"
+    },
+    {
+      "provider_id": 613,
+      "name": "Freevee",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "free_ads"
+    },
+    {
+      "provider_id": 2,
+      "name": "Apple TV",
+      "display_priority": 2,
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "transactional",
+      "notes": "The storefront, not Apple TV Plus the subscription. Rent and buy only."
+    },
+    {
+      "provider_id": 3,
+      "name": "Google Play Movies",
+      "display_priority": 3,
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "transactional"
+    },
+    {
+      "provider_id": 10,
+      "name": "Amazon Video",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "transactional"
+    },
+    {
+      "provider_id": 192,
+      "name": "YouTube",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "transactional"
+    },
+    {
+      "provider_id": 68,
+      "name": "Microsoft Store",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "transactional"
+    },
+    {
+      "provider_id": 7,
+      "name": "Fandango At Home",
+      "in_tv_directory": true,
+      "in_movie_directory": true,
+      "kind": "transactional",
+      "notes": "Formerly Vudu."
+    }
+  ]
+}

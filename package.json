@@ -7,7 +7,12 @@
     "build": "next build",
     "start": "next start -p 3200",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "docs": "node scripts/render-html.mjs",
+    "auth:hash": "node scripts/hash-password.mjs",
+    "db:seed:sql": "node scripts/seed-providers.mjs",
+    "db:seed": "node scripts/seed-providers.mjs | psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1",
+    "prd:snapshot": "sh scripts/snapshot-prd.sh"
   },
   "dependencies": {
     "next": "^15.5.4",
@@ -18,6 +23,7 @@
     "@types/node": "^22.15.3",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "marked": "^18.0.7",
     "typescript": "^5.8.3",
     "vitest": "^3.1.4"
   }

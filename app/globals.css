@@ -570,3 +570,150 @@ tbody tr:last-child td {
 .bad-text {
   color: var(--critical);
 }
+
+/* ---------- the show lookup ---------- */
+
+.ask {
+  display: flex;
+  gap: 9px;
+  max-width: 520px;
+  margin-bottom: 14px;
+}
+
+.ask input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 9px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--baseline);
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.ask input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.verdict {
+  padding: 18px 20px;
+  display: grid;
+  gap: 9px;
+}
+
+.verdict h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.verdict .note {
+  margin: 0;
+}
+
+/* The credit TMDB and JustWatch require. Quiet, but never omitted: the terms
+   make attribution the price of the data. */
+.attribution {
+  font-size: 12px;
+  color: var(--muted);
+  border-top: 1px solid var(--gridline);
+  padding-top: 9px;
+}
+
+/* ---------- the toggle ---------- */
+
+button.btn {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+button.btn.off {
+  border: 1px dashed var(--baseline);
+}
+
+button.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme='light'])) .btn {
+    color: #0a1011;
+  }
+}
+
+/* ---------- sign-in ---------- */
+
+.signin {
+  display: flex;
+  justify-content: center;
+  padding-top: 8vh;
+}
+
+.signin-card {
+  width: 100%;
+  max-width: 380px;
+}
+
+.signin-card h1 {
+  margin: 0 0 6px;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+}
+
+.signin-card .lede {
+  margin: 0 0 20px;
+}
+
+.signin-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.signin-input {
+  width: 100%;
+  padding: 9px 11px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.signin-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.signin-error {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--critical);
+}
+
+.signin-card .btn {
+  margin-top: 18px;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.signin-card .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -19,9 +19,14 @@ import {
   subscriptions,
   titles,
 } from './demo-data';
-import { parseFamilyFile } from './family-file';
+import {
+  parseFamilyFile,
+  withSubscriptionStatus,
+  writeFamilyFile,
+  type SubscriptionStatusChange,
+} from './family-file';
 import type { Catalog } from './domain';
-import type { CountryCode } from './types';
+import type { CountryCode, Subscription } from './types';
 
 /**
  * The family is US-only today. Named here rather than assumed anywhere, so the
@@ -106,4 +111,60 @@ export function getCatalog(): Catalog {
 /** The provenance alone, for the indicator every page carries. */
 export function getDatasetSource(): DatasetSource {
   return loadCatalog().source;
+}
+
+/* --------------------------------------------------------------------------
+ * Writing back.
+ *
+ * The same rule that governs reading governs writing, and in the same place.
+ * Only the private file is a real store. The demo dataset is a fixture compiled
+ * into the bundle, and a toggle pressed against it must never conjure a
+ * `data/family.json` - a file that appears by accident is a file nobody can tell
+ * apart from real household data later.
+ * ----------------------------------------------------------------------- */
+
+/** What a toggle actually achieved, in the terms the screen has to report. */
+export interface StatusWriteResult {
+  source: DatasetSource;
+  /** False on demo data. The change is real for this session and nothing more. */
+  persisted: boolean;
+  subscription: Subscription;
+}
+
+/**
+ * Pause or resume one subscription, and say whether it survived the request.
+ *
+ * On private data the whole file is re-checked and rewritten atomically, so a
+ * refusal leaves the previous file exactly as it was. On demo data nothing is
+ * written and `persisted` is false, which the screen states rather than hides.
+ */
+export function setSubscriptionStatus(
+  change: SubscriptionStatusChange,
+  path: string = FAMILY_DATA_PATH,
+): StatusWriteResult {
+  const loaded = loadCatalog(path);
+
+  if (loaded.source === 'demo') {
+    const sub = loaded.catalog.subscriptions.find((s) => s.id === change.subscriptionId);
+    if (!sub) throw new Error(`No subscription "${change.subscriptionId}" in the demo dataset.`);
+    return { source: 'demo', persisted: false, subscription: applyToRow(sub, change) };
+  }
+
+  const file = parseFamilyFile(readFileSync(path, 'utf8'), path);
+  const next = withSubscriptionStatus(file, change);
+  writeFamilyFile(path, next);
+  return {
+    source: 'private',
+    persisted: true,
+    subscription: next.subscriptions.find((s) => s.id === change.subscriptionId)!,
+  };
+}
+
+/** The in-memory equivalent, for the demo dataset the app may not write to. */
+function applyToRow(sub: Subscription, change: SubscriptionStatusChange): Subscription {
+  const { status: _s, pausedOn: _p, resumeBy: _r, ...rest } = sub;
+  if (change.status === 'active') return { ...rest, status: 'active' };
+  const paused: Subscription = { ...rest, status: 'paused', pausedOn: change.pausedOn };
+  if (change.resumeBy !== undefined) paused.resumeBy = change.resumeBy;
+  return paused;
 }

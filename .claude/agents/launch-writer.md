@@ -39,6 +39,15 @@ FAQ against the near-term plan. A launch note that oversells is worse than a sho
 
 Numbers must come from the code or the data. Never invent a savings figure.
 
+## The browsable copy
+
+After you write `LAUNCH.md`, run `npm run docs`. It renders both Markdown artifacts
+to `LAUNCH.html` and `SUBMISSION.html`, styled for reading in a browser.
+
+The Markdown is the source of truth. The HTML is generated output, so never write or
+edit it by hand and never let a claim reach it that is not in the Markdown. If the
+rendering itself needs to change, change `scripts/render-html.mjs`.
+
 ## Writing standard
 
 Follow `CLAUDE.md` exactly: active voice, brevity, real vocabulary, no Oxford comma,

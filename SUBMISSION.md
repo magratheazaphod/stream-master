@@ -2,100 +2,110 @@
 
 ## The problem I chose
 
-Eight people in my extended family, spread across four households, pay for streaming
-separately and have no idea what the others already carry. Two households pay for
-Max so one person can finish one show. Somebody renews Paramount+ annually a month
-after the season they wanted ended. Nobody is being careless; the information simply
-does not exist anywhere.
+Eight adults in my extended family, spread across four households, pay for streaming
+separately and cannot see what the others carry. Four households pay for Netflix.
+Three pay for Max. Somebody holds Paramount+ for eleven months past the season that
+justified it. Nobody is careless - the information does not exist anywhere.
 
-The obvious fix - share one login - is dead. Netflix, Disney+ and most majors now
-enforce household boundaries by IP and device. A product built on password sharing
-would break within a month and take the family's trust with it. So stream-master
-bets on the play that still works: **sequencing**. Services are month-to-month
-commodities. If one household carries Max in March and another carries it in June,
-and the family knows who is carrying what, the same viewing costs materially less
-without anyone violating a terms of service. That is the product.
+The obvious fix, one shared login, is dead. Netflix, Disney+ and the rest enforce
+household boundaries by IP and device, so a product built on password sharing breaks
+within a month and takes the family's trust with it. stream-master bets on the play
+that still works: **sequencing**. Services are month-to-month rentals. If the family
+knows what it wants to watch and when, each service gets held only in the months that
+earn it. On the demo dataset that turns $2,003 a year into $270.
 
 ## One-page PRD
 
-- **Problem / who it's for:** Six to eight technically comfortable adults in one
-  extended family, across multiple households and their own devices. They pay for
-  overlapping streaming services, cannot see each other's subscriptions and cannot
-  legally share logins. They need a combined coverage picture - the tessellation -
-  before they can cut anything.
+- **Problem / who it's for:** Eight technically comfortable adults in one extended
+  family across four households. They hold overlapping subscriptions, cannot see each
+  other's spend and cannot legally share logins. They need the combined picture and a
+  schedule before anyone cancels anything.
 
-- **What it does (and explicitly what's out of scope):** Each member enters the
-  subscriptions they hold with price, billing cycle and renewal date. The app
-  assembles the family-wide view, flags duplicate coverage and gaps, and proposes a
-  rotation schedule that hands each service to one household at a time. Every service
-  carries a flag for the sharing the provider actually permits, so no recommendation
-  crosses a household line the provider enforces. Out of scope by decision, not by
-  backlog: no credential storage and no login brokering, ever; no row-level security,
-  because 6-8 close relatives seeing who pays for what is the feature; no billing,
-  payment splitting or settlement between households; no viewing-history ingestion or
-  recommendation engine; no design for scale past a few dozen users and a few hundred
-  rows a year.
+- **What it does (and explicitly what's out of scope):** Three screens. The landscape
+  shows every subscription with price, payer, renewal date and the sharing the
+  provider actually permits, and flags the services paid for twice. The shared
+  watchlist ranks titles by how many family members want them and prices the cheapest
+  way in, including rent and buy. The plan turns the watchlist into a twelve-month
+  calendar naming which household carries which service in which month. Out of scope
+  by decision: no credential storage and no agentic cancellation, ever - the app
+  proposes and a human executes on the provider's own site; no row-level security,
+  because eight close relatives seeing who pays for what is the feature; no payment
+  splitting or settlement; no viewing-history ingestion; no scale design past a few
+  dozen users. The family's own numbers stay out of the repository too. They live in
+  an ignored `data/family.json`, and a malformed one throws rather than falling back
+  to demo figures, because a reader who cannot tell the two datasets apart will
+  eventually publish the wrong one.
 
-- **How it couples to the demand plan:** Directly. The tessellation is the supply
-  side; what the family intends to watch next quarter is the demand side, and the
-  rotation schedule is where they meet. Today the demand plan is implicit - it lives
-  in group chats about what everyone wants to start. The first build captures supply
-  and cost only. Availability data ("which service carries show X") is what turns a
-  wish list into a schedule, and it is the one feature needing an external source.
-  TMDB watch providers is the leading candidate: free, JustWatch-sourced, title-level
-  only. Watchmode is the paid fallback that adds rental and purchase pricing. That
-  call is open, and inventory ships before it closes.
+- **How it couples to the demand plan:** It is the whole engine. Every title carries
+  the month the family intends to watch it, and the plan places services only against
+  those months. A service nobody named gets listed as unjustified - on the demo data
+  that is Netflix at $648 a year, plus Hulu, Prime Video and Paramount+. The coupling
+  is strict enough to refuse what it cannot verify: The Brutalist has no confirmed
+  availability, so it lands in the unplaced list rather than being guessed into a
+  month.
 
-- **How a human and the agent co-work:** A member delegates by entering their own
-  subscriptions and saying what they want to watch next. The agent returns a
-  concrete proposal - drop these two duplicates, move Max to the Chicago household in
-  April, hold Apple TV+ through the season finale - with the monthly delta attached.
-  The review point sits with the person who holds the card: no subscription is
-  cancelled, paused or started by the app. The agent produces the plan; a human
-  clicks cancel on the provider's own site and marks it done. Redirect happens in the
-  same loop, by correcting a service's sharing flag or pinning a subscription the
-  agent wanted to drop.
+- **How a human and the agent co-work:** A family member delegates by adding titles
+  they want and the month they want them. The agent returns the calendar with the
+  dollar delta, the season-level warnings and the titles it could not place. The
+  review point sits with whoever holds the card: the app never cancels, pauses or
+  starts a subscription. A human executes on the provider's site and marks it done.
+  Redirect happens by pinning a subscription, correcting a sharing flag or moving a
+  title's planned month.
 
-- **Success criteria:** All eight members have entered their subscriptions within two
-  weeks of launch and refresh them at least once a quarter. The first tessellation
-  surfaces at least three duplicate subscriptions the family did not know about.
-  Combined monthly spend falls 25% within one billing quarter and stays there. At
-  least two rotation handoffs complete across household lines without anyone losing
-  access to a show mid-season. Zero credentials stored, checked by inspecting the
-  schema.
+- **Success criteria:** All eight members enter their subscriptions within two weeks
+  and refresh quarterly. The first landscape on the real family file names at least
+  two duplicated services and $50 a month of redundant spend nobody had counted - the
+  demo file yields exactly two, Netflix and Max, at $88 redundant. Combined monthly
+  spend falls 25% within one billing quarter and stays there; the demo claims 87%, so
+  25% is the floor that keeps the thesis alive. At least two cross-household handoffs
+  complete without anyone losing a show mid-season. Zero titles scheduled onto a
+  service that does not carry every season, checked against the partial-placement list
+  on every plan render.
 
 ## Prototype
 
-No product code exists yet. The repo holds the README, the writing standard in
-`CLAUDE.md` and the two subagents that generate this file and `LAUNCH.md`. There is
-nothing to run.
+A Next.js and TypeScript app running against a local dataset, with 58 tests covering
+the domain rules, the catalog loader and the TMDB client.
 
-The stack is decided even though it is unwritten: one responsive Next.js and
-TypeScript app, installable as a PWA, on Postgres with Supabase for auth and
-database, Google sign-in only. The README still calls the stack undecided and lists
-household structure as an open question. Both are now settled - multiple households,
-shared visibility, no RLS - and the README is stale.
+```
+npm install
+npm run dev     # http://localhost:3200
+npm test
+```
+
+Three routes: `/` landscape, `/watchlist` and `/plan`. Every page carries a badge
+naming which dataset is on screen. Without a private file the app runs the committed
+demo data, and swapping either one for Postgres means changing `loadCatalog` and
+nothing else. Availability sits behind a vendor-neutral seam with a fixture provider
+today. A complete TMDB client ships with retry, typed errors and season-level provider
+calls, and nothing calls it yet - the adapter joining it to the seam is the next piece
+of work and the only thing between the plan and real data.
+
+The hardest decision in the build is that unknown never means unavailable. A source
+that fails, times out or has no record produces unknown, which the plan refuses to
+schedule rather than quietly dropping.
+
+The README still ranks one-press pause and the idle-service alarm P0. Neither exists.
+What shipped is the rotation engine the README ranks P1, because sequencing is the
+claim worth testing first and pause mapping is hand work that proves nothing. Trust
+the code for the current priority order.
 
 ## Customer-facing artifact
 
-The launch PR/FAQ for the family, written for the person who has to enter their
-subscriptions before any of this pays off: [LAUNCH.md](LAUNCH.md).
+The launch PR/FAQ, written for the relative who has to enter their subscriptions
+before any of this pays off: [LAUNCH.md](LAUNCH.md).
 
 ## Notes
 
-I assumed the family will do honest data entry once and lazily thereafter, so the
-inventory has to earn its keep on the first screen or the data goes stale and the
-product dies. That pushed availability data behind cost optimization: the first build
-needs no external API and can ship on hand-entered rows.
+The riskiest assumption is behavioural, not technical. Rotating four times a year is
+more friction than paying $17 a month to not think about it, and the demo's 87% saving
+assumes the family cancels on cue. If two handoffs fail, this is a spend-visibility
+tool and the plan screen is decoration.
 
-The riskiest assumption is that sequencing is behaviourally acceptable. Cancelling
-and resubscribing four times a year is more friction than paying $16 a month to not
-think about it, and the app has to make the handoff nearly free or the family will
-route around it. If two rotations fail, the thesis is wrong and this becomes a
-spend-visibility tool rather than an optimizer.
-
-With more time I would settle the availability source by pulling a hundred titles the
-family actually watched and measuring TMDB's coverage against them, rather than
-choosing on price. I would also model annual-versus-monthly explicitly, since an
-annual plan is a bet against ever rotating that service and the app should price that
-tradeoff rather than hide it.
+The second risk is data. TMDB's series-level watch-provider response is a union across
+seasons, so a show listed on one service may carry only half of it there. The domain
+handles that split already - it prefers a complete carrier over a cheaper partial one
+and names the stranding when every option runs short. Nobody has measured how often
+TMDB's seasons disagree with its own series answer. That spike, specified in
+`docs/tmdb-integration.md`, gates whether TMDB can be the sole source, and with more
+time I would run it before writing another line of product code.

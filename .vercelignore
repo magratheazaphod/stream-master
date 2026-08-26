@@ -1,0 +1,21 @@
+# Belt to .gitignore's braces.
+#
+# Deploying from GitHub only ever sends committed files, so .gitignore is enough.
+# Deploying with the Vercel CLI uploads the working directory instead, and the
+# CLI does not read .gitignore. Without this file, one `vercel` run from a laptop
+# that has real household data in data/family.json uploads it. That is the exact
+# leak the whole demo-versus-private rule in lib/catalog.ts exists to prevent.
+#
+# Same shape as .gitignore: ignore the contents, keep the example.
+/data/*
+!/data/family.example.json
+
+.env
+.env.*
+!.env.example
+
+cowork/
+screenshots/
+supabase/
+*.md
+!README.md

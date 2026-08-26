@@ -1,15 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import type { DatasetSource } from '@/lib/catalog';
-
-const links = [
-  { href: '/', label: 'Landscape' },
-  { href: '/pause', label: 'Pause' },
-  { href: '/watchlist', label: 'Watchlist' },
-  { href: '/plan', label: 'Plan' },
-];
 
 function Owl() {
   return (
@@ -48,8 +40,9 @@ function DatasetBadge({ dataset }: { dataset: DatasetSource }) {
   );
 }
 
+/** One screen, so no nav. The dataset badge stays: it is the only thing on this
+ *  header that changes what the numbers below it mean. */
 export function Masthead({ dataset }: { dataset: DatasetSource }) {
-  const path = usePathname();
   return (
     <header className="masthead">
       <Link href="/" className="wordmark">
@@ -57,17 +50,6 @@ export function Masthead({ dataset }: { dataset: DatasetSource }) {
         stream<span>master</span>
       </Link>
       <DatasetBadge dataset={dataset} />
-      <nav>
-        {links.map((l) => (
-          <Link
-            key={l.href}
-            href={l.href}
-            aria-current={path === l.href ? 'page' : undefined}
-          >
-            {l.label}
-          </Link>
-        ))}
-      </nav>
     </header>
   );
 }

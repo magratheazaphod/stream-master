@@ -37,3 +37,19 @@ not scaffolds, and `/prd` refreshes both at once.
   Two or three sentences on the launch, then three to five FAQ entries. Half a page.
 
 Each subagent owns its own file. Neither writes the other's.
+
+`/prd` closes by running `npm run prd:snapshot`, which commits the four artifacts to
+the `prd-history` branch. Each cycle overwrites the working copies wholesale, so that
+branch is the only record of what a previous draft said. It never touches HEAD or the
+working tree. Read it with `git log --oneline prd-history` and
+`git diff prd-history~1 prd-history`.
+
+`/prd-back-check` runs the opposite direction: it takes the documents as written,
+Jesse's hand edits included, and audits every falsifiable claim against the code. It
+reports and never edits, because a divergence can be fixed on either side and that
+choice is Jesse's.
+
+Both also ship a browsable copy, `SUBMISSION.html` and `LAUNCH.html`, for dragging
+into a browser. `npm run docs` renders them from the Markdown via
+`scripts/render-html.mjs`, and `/prd` runs it. The Markdown is the source of truth,
+so the HTML never gets edited by hand. Change the renderer, not its output.

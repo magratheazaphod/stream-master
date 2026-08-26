@@ -49,6 +49,11 @@ export const people: Person[] = [
  *   cancelling, and each loses something different
  * - Paramount+ is bought through a channel store and stops from one account
  * - Prime Video has no terms recorded at all, which is not the same as free
+ *
+ * `manageUrl` and `method` here are what a playbook in `cowork/` will act on, so
+ * each one that has not been walked says so at the top of its playbook. Netflix's
+ * deep link and Hulu's pause are the two settled cases. The rest are illustrative
+ * and a walkthrough rewrites them with a fresh `verifiedOn`.
  */
 export const services: Service[] = [
   {
@@ -87,6 +92,9 @@ export const services: Service[] = [
     pause: {
       method: 'native-pause',
       manageUrl: 'https://secure.hulu.com/account',
+      // The provider states the ceiling in weeks, so three months is the floor of
+      // twelve weeks, not a round number somebody chose. Rounding it up would
+      // produce a resume date the provider will not honour.
       maxPauseMonths: 3,
       costs: [],
       verifiedOn: '2026-07-19',
@@ -114,6 +122,9 @@ export const services: Service[] = [
   },
   {
     id: 's-peacock', name: 'Peacock', monthlyPrice: 7.99, sharingPolicy: 'household-only',
+    // The second native-pause case, so the UI never renders that branch off one
+    // row. Nobody has walked it: `cowork/peacock-pause.md` refuses to act until
+    // somebody confirms a pause exists here at all.
     pause: {
       method: 'native-pause',
       manageUrl: 'https://www.peacocktv.com/account/plans',

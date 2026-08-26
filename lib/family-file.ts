@@ -13,6 +13,7 @@
  * outright rather than delegating to a dependency.
  */
 
+import { writeFileAtomic } from './atomic-write';
 import type { MockTable, MockTitleFixture } from './availability';
 import type {
   BillingCycle,
@@ -442,4 +443,91 @@ export function parseFamilyFile(text: string, path: string): FamilyFile {
     throw new FamilyFileError(path, [`is not valid JSON: ${(e as Error).message}`]);
   }
   return checkFamilyData(parsed, path);
+}
+
+/* -- The write path ---------------------------------------------------------
+ *
+ * Writing the private file has to be as careful as reading it. Three guards,
+ * and none of them is optional:
+ *
+ * 1. The value is checked before it is serialised, so a bad in-memory edit never
+ *    reaches the disk.
+ * 2. The serialised text is parsed and checked *again*, so the round trip is
+ *    proved rather than assumed.
+ * 3. The bytes land in a temp file in the same directory and are renamed over
+ *    the target. Rename within a directory is atomic, so a reader sees the old
+ *    file or the new one and never a half-written one.
+ *
+ * The file is JSON, so hand formatting and key order do not survive a write. The
+ * data does, which is the property worth guarding.
+ */
+
+/** Field order for the written file. Stable output keeps diffs readable. */
+export function serializeFamilyFile(file: FamilyFile): string {
+  const ordered = {
+    country: file.country,
+    households: file.households,
+    people: file.people,
+    services: file.services,
+    subscriptions: file.subscriptions,
+    titles: file.titles,
+    interests: file.interests,
+    availability: file.availability,
+  };
+  return `${JSON.stringify(ordered, null, 2)}\n`;
+}
+
+/**
+ * Serialise, prove the result parses back, then swap it into place atomically.
+ *
+ * Refusing on a failed round trip is the point. The alternative is a family
+ * losing real spend records to a file the app itself can no longer load.
+ */
+export function writeFamilyFile(path: string, file: FamilyFile): void {
+  checkFamilyData(file, path); // guard 1: the value itself
+  const text = serializeFamilyFile(file);
+  parseFamilyFile(text, path); // guard 2: the bytes about to be written
+
+  writeFileAtomic(path, text); // guard 3
+}
+
+/** What the app may change about one subscription from the screen. */
+export interface SubscriptionStatusChange {
+  subscriptionId: string;
+  status: SubscriptionStatus;
+  /** ISO date billing stopped. Required when pausing, ignored when resuming. */
+  pausedOn?: string;
+  /** ISO date the service is due back. The app owns this date. */
+  resumeBy?: string;
+}
+
+/**
+ * A copy of the file with one subscription's status changed. Pure, so the
+ * decision is testable without touching a disk.
+ *
+ * Resuming clears `pausedOn` and `resumeBy` rather than leaving them behind.
+ * The checker rejects an active row that still carries them, and it is right to:
+ * a stale resume date is how a household gets nagged about a service it is
+ * already paying for.
+ */
+export function withSubscriptionStatus(
+  file: FamilyFile,
+  change: SubscriptionStatusChange,
+): FamilyFile {
+  const found = file.subscriptions.some((s) => s.id === change.subscriptionId);
+  if (!found) {
+    throw new Error(`No subscription "${change.subscriptionId}" in this dataset.`);
+  }
+
+  return {
+    ...file,
+    subscriptions: file.subscriptions.map((sub) => {
+      if (sub.id !== change.subscriptionId) return sub;
+      const { status: _s, pausedOn: _p, resumeBy: _r, ...rest } = sub;
+      if (change.status === 'active') return { ...rest, status: 'active' as const };
+      const paused: Subscription = { ...rest, status: 'paused', pausedOn: change.pausedOn };
+      if (change.resumeBy !== undefined) paused.resumeBy = change.resumeBy;
+      return paused;
+    }),
+  };
 }
