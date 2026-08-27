@@ -44,6 +44,21 @@ export interface PauseRequest {
    */
   approved: boolean;
   approvedAt: string;
+  /**
+   * Who said yes, by name.
+   *
+   * Optional, and it has to be: a queue file written before this field existed
+   * still parses, and somebody who skipped the person picker can still pause
+   * their own subscription. Absent means nobody claimed it, never that the
+   * request is unapproved - `approved` alone is the gate and this field never
+   * touches it.
+   *
+   * Attribution and not proof. Everyone shares one password, so this records who
+   * said they pressed the button rather than who provably did. For an
+   * irreversible action an unattended agent executes, a name somebody chose is
+   * still worth more than an anonymous `true`.
+   */
+  approvedBy?: string;
   resumeBy?: string;
   notes?: string;
 }

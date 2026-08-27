@@ -717,3 +717,139 @@ button.btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ---------- who is looking, and adding to the data ---------- */
+
+/* The person picker and the add disclosure share one quiet line above the list.
+   Both are secondary to the subscriptions, and both have to stay out of the way
+   of somebody who only came to press one button. */
+.whoami {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+button.linkish {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent-ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+button.linkish:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.picker,
+.adder {
+  margin-bottom: 18px;
+}
+
+.picker h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.picker .note {
+  margin-top: 0;
+}
+
+.picker-group {
+  margin-top: 12px;
+}
+
+.picker-household {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.picker-names,
+.adder-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.picker-skip {
+  margin: 16px 0 0;
+  font-size: 13px;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* Ordering, not access. The pill says whose row this is and nothing is hidden
+   from anybody, so it stays visually quiet. */
+.pill.mine {
+  background: transparent;
+  border: 1px dashed var(--baseline);
+  color: var(--text-secondary);
+}
+
+.adder-tabs {
+  margin-bottom: 14px;
+}
+
+.adder-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.field > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.field input,
+.field select {
+  padding: 8px 10px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.field input:focus-visible,
+.field select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.adder-form .cost,
+.adder-act {
+  grid-column: 1 / -1;
+}
+
+.adder-act {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.adder ul.note {
+  margin-bottom: 0;
+  padding-left: 18px;
+}

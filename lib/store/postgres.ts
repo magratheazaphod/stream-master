@@ -17,11 +17,17 @@
  */
 
 import { MockAvailabilityProvider } from '../availability';
-import { checkFamilyData, type SubscriptionStatusChange } from '../family-file';
+import { withAddition, type CatalogAddition } from '../family-add';
+import { checkFamilyData, type FamilyFile, type SubscriptionStatusChange } from '../family-file';
+import type { Catalog } from '../domain';
 import type { PauseRequest, PauseResult } from '../pause-queue';
 import type { Offer, Subscription } from '../types';
 import { connectionString, db, describeDatabase } from './db';
 import { applyToRow, demoCatalog } from './file';
+import {
+  DEMO_IS_READ_ONLY,
+  type AddWriteResult,
+} from './types';
 import type {
   CatalogStore,
   LoadedCatalog,
@@ -289,6 +295,57 @@ export class PostgresCatalogStore implements CatalogStore {
   }
 
   /**
+   * Add a household, a person, a service or a subscription.
+   *
+   * The validation is the file's validation, deliberately. `withAddition` runs
+   * the whole proposed catalogue past `checkFamilyData` before a single INSERT
+   * goes out, which is the same posture `load` takes with its selects: the
+   * database's constraints already forbid most of what could go wrong, and
+   * "most" is the wrong number when the other backend is stricter.
+   *
+   * One transaction, so a household and its first person arrive together or not
+   * at all. A household with nobody in it can pay for nothing and would sit
+   * there as a dead row somebody has to notice.
+   */
+  async addToCatalog(addition: CatalogAddition): Promise<AddWriteResult> {
+    const loaded = await this.load();
+    if (loaded.source === 'demo') throw new Error(DEMO_IS_READ_ONLY);
+
+    const { file, added } = withAddition(familyFileFromCatalog(loaded.catalog), addition);
+
+    await this.sql.begin(async (tx) => {
+      for (const id of added.households ?? []) {
+        const h = file.households.find((row) => row.id === id)!;
+        await tx`insert into households (id, name, location)
+                 values (${h.id}, ${h.name}, ${h.location})`;
+      }
+      for (const id of added.people ?? []) {
+        const p = file.people.find((row) => row.id === id)!;
+        await tx`insert into people (id, name, household_id)
+                 values (${p.id}, ${p.name}, ${p.householdId})`;
+      }
+      for (const id of added.services ?? []) {
+        const s = file.services.find((row) => row.id === id)!;
+        // No write to `service_pause_terms`. Nobody has walked this provider's
+        // stop-billing flow, and a row here would earn the service a pause
+        // button the app cannot stand behind.
+        await tx`insert into services (id, name, monthly_price, sharing_policy, extra_member_price)
+                 values (${s.id}, ${s.name}, ${s.monthlyPrice}, ${s.sharingPolicy},
+                         ${s.extraMemberPrice ?? null})`;
+      }
+      for (const id of added.subscriptions ?? []) {
+        const s = file.subscriptions.find((row) => row.id === id)!;
+        await tx`insert into subscriptions
+                   (id, service_id, household_id, payer_id, monthly_cost, billing_cycle, renews_on, status)
+                 values (${s.id}, ${s.serviceId}, ${s.householdId}, ${s.payerId},
+                         ${s.monthlyCost}, ${s.billingCycle}, ${s.renewsOn}, 'active')`;
+      }
+    });
+
+    return { source: 'private', added };
+  }
+
+  /**
    * Record one approved request.
    *
    * The upsert clears `handed_off_at`, which is the interesting half. A second
@@ -301,12 +358,13 @@ export class PostgresCatalogStore implements CatalogStore {
     await this.sql`
       insert into pause_requests (
         id, subscription_id, service_id, service_name, household_name,
-        action, method, manage_url, approved, approved_at, resume_by, notes
+        action, method, manage_url, approved, approved_at, approved_by, resume_by, notes
       ) values (
         ${request.id}, ${request.subscriptionId}, ${request.serviceId},
         ${request.serviceName}, ${request.householdName}, ${request.action},
         ${request.method}, ${request.manageUrl}, ${request.approved},
-        ${request.approvedAt}, ${request.resumeBy ?? null}, ${request.notes ?? null}
+        ${request.approvedAt}, ${request.approvedBy ?? null},
+        ${request.resumeBy ?? null}, ${request.notes ?? null}
       )
       on conflict (id) do update set
         subscription_id = excluded.subscription_id,
@@ -318,6 +376,7 @@ export class PostgresCatalogStore implements CatalogStore {
         manage_url      = excluded.manage_url,
         approved        = excluded.approved,
         approved_at     = excluded.approved_at,
+        approved_by     = excluded.approved_by,
         resume_by       = excluded.resume_by,
         notes           = excluded.notes,
         handed_off_at   = null`;
@@ -337,12 +396,14 @@ export class PostgresCatalogStore implements CatalogStore {
           manage_url: string;
           approved: boolean;
           approved_at: Date;
+          approved_by: string | null;
           resume_by: string | null;
           notes: string | null;
           handed_off_at: Date | null;
         }[]
       >`select id, subscription_id, service_id, service_name, household_name, action,
-               method, manage_url, approved, approved_at, resume_by, notes, handed_off_at
+               method, manage_url, approved, approved_at, approved_by, resume_by, notes,
+               handed_off_at
           from pause_requests order by created_at`,
       this.sql<
         {
@@ -371,6 +432,7 @@ export class PostgresCatalogStore implements CatalogStore {
           approved: r.approved,
           approvedAt: r.approved_at.toISOString(),
         };
+        if (r.approved_by !== null) request.approvedBy = r.approved_by;
         if (r.resume_by !== null) request.resumeBy = r.resume_by;
         if (r.notes !== null) request.notes = r.notes;
         const handedOffAt = iso(r.handed_off_at);
@@ -392,6 +454,30 @@ export class PostgresCatalogStore implements CatalogStore {
       }),
     };
   }
+}
+
+/**
+ * The loaded catalogue back in the file's shape, so one validator serves both
+ * stores.
+ *
+ * `availability` comes back empty rather than reconstructed. The provider on a
+ * loaded catalogue answers queries; it does not hand back its table, and nothing
+ * a family member can add touches an offer. An empty table means the checker's
+ * offer-to-service references have nothing to check, which costs nothing here
+ * and is why this helper is private to the add path rather than exported as a
+ * general conversion.
+ */
+function familyFileFromCatalog(catalog: Catalog): FamilyFile {
+  return {
+    country: catalog.country,
+    households: catalog.households,
+    people: catalog.people,
+    services: catalog.services,
+    subscriptions: catalog.subscriptions,
+    titles: catalog.titles,
+    interests: catalog.interests,
+    availability: {},
+  };
 }
 
 /**

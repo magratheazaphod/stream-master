@@ -21,6 +21,10 @@ export interface Row {
   /** False when nobody has walked this provider's stop-billing flow. */
   hasTerms: boolean;
   pauseCosts: PauseCost[];
+  /** True when the person picked on this browser is the payer. Ordering only. */
+  mine?: boolean;
+  /** Who asked for the pause, where anybody said who they were. */
+  approvedBy?: string;
 }
 
 const usd = (n: number) =>
@@ -71,9 +75,12 @@ function statusPill(row: Row) {
 export function Subscriptions({
   initialRows,
   dataset,
+  viewerName,
 }: {
   initialRows: Row[];
   dataset: DatasetSource;
+  /** The person picked on this browser, if anybody was. Ordering and wording. */
+  viewerName?: string;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [busy, setBusy] = useState<string | null>(null);
@@ -104,6 +111,7 @@ export function Subscriptions({
                 resumeBy: body.subscription.resumeBy,
                 progress: body.pause.progress,
                 evidence: body.pause.result?.evidence,
+                approvedBy: body.pause.request?.approvedBy,
               }
             : r,
         ),
@@ -154,7 +162,10 @@ export function Subscriptions({
 
       {error && <p className="note bad-text">{error}</p>}
 
-      <h2>Every subscription</h2>
+      {/* Ordering, never filtering. Four households share one screen on purpose,
+          and hiding another household's spend behind the person picker would be
+          a different product. Yours comes first; everybody's is still here. */}
+      <h2>{viewerName ? 'Every subscription, yours first' : 'Every subscription'}</h2>
       <div className="queue">
         {rows.map((row) => (
           <div className="card row" key={row.id}>
@@ -164,6 +175,7 @@ export function Subscriptions({
                 <span className="dim">
                   {row.householdName}, paid by {row.payerName}
                 </span>
+                {row.mine && <span className="pill mine">You pay for this</span>}
                 {statusPill(row)}
               </div>
               {row.status === 'paused' && row.resumeBy && (
@@ -174,6 +186,9 @@ export function Subscriptions({
                   Waiting for the Mac that runs the agent. Nothing happens until it wakes
                   up and takes the job.
                 </div>
+              )}
+              {row.status === 'paused' && row.approvedBy && (
+                <div className="because dim">Asked for by {row.approvedBy}.</div>
               )}
               {row.status === 'paused' && row.evidence && (
                 <div className="because dim">{row.evidence}</div>

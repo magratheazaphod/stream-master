@@ -75,12 +75,13 @@ try {
       method: string;
       manage_url: string;
       approved_at: Date;
+      approved_by: string | null;
       resume_by: string | null;
       notes: string | null;
     }[]
   >`
     select id, subscription_id, service_id, service_name, household_name, action,
-           method, manage_url, approved_at, resume_by, notes
+           method, manage_url, approved_at, approved_by, resume_by, notes
       from pause_requests
      where approved and handed_off_at is null
      order by created_at`;
@@ -102,6 +103,9 @@ try {
         approved: true,
         approvedAt: r.approved_at.toISOString(),
       };
+      // Who said yes, where anybody did. Optional in the contract, so a request
+      // approved before the column existed reaches the agent unchanged.
+      if (r.approved_by !== null) request.approvedBy = r.approved_by;
       if (r.resume_by !== null) request.resumeBy = r.resume_by;
       if (r.notes !== null) request.notes = r.notes;
       return request;

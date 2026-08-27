@@ -13,6 +13,7 @@
  */
 
 import type { Catalog } from '../domain';
+import type { AdditionResult, CatalogAddition } from '../family-add';
 import type { SubscriptionStatusChange } from '../family-file';
 import type { PauseRequest, PauseResult } from '../pause-queue';
 import type { CountryCode, Subscription } from '../types';
@@ -52,6 +53,25 @@ export interface StatusWriteResult {
   /** False on demo data. The change is real for this session and nothing more. */
   persisted: boolean;
   subscription: Subscription;
+}
+
+/**
+ * What an addition achieved. Unlike a toggle it has no demo-data half measure:
+ * the fixture is compiled into the bundle and a store that cannot keep the new
+ * row says so and writes nothing, rather than showing a household that vanishes
+ * on the next request.
+ */
+/**
+ * What the screen shows when somebody tries to add to the demo dataset. It
+ * names the cause and the fix, because a form that appears to work and keeps
+ * nothing is the failure this product cannot afford.
+ */
+export const DEMO_IS_READ_ONLY =
+  'This copy is running on demo data, which is a fixture compiled into the app and cannot be added to. Nothing was saved. Load the family data first.';
+
+export interface AddWriteResult {
+  source: DatasetSource;
+  added: AdditionResult['added'];
 }
 
 /**
@@ -97,6 +117,20 @@ export interface CatalogStore {
    * and `persisted` is false, which the screen states rather than hides.
    */
   setSubscriptionStatus(change: SubscriptionStatusChange): Promise<StatusWriteResult>;
+
+  /**
+   * Add a household, a person, a service or a subscription.
+   *
+   * Every implementation validates through `withAddition`, which runs the whole
+   * proposed dataset past the same checker the private file uses. A form must
+   * not be able to write a row the loader would later refuse.
+   *
+   * The demo dataset is read-only here as it is everywhere else, and a store
+   * running on it throws rather than returning a row that does not exist. A
+   * household that appears and then vanishes on refresh is worse than a refusal
+   * that explains itself.
+   */
+  addToCatalog(addition: CatalogAddition): Promise<AddWriteResult>;
 
   /**
    * Record one approved request for Cowork. Idempotent on the request id: two
