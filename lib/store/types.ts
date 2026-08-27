@@ -140,6 +140,16 @@ export interface CatalogStore {
    */
   queuePauseRequest(request: PauseRequest): Promise<void>;
 
+  /**
+   * Take a request back out of the queue.
+   *
+   * Only ever called for a request no agent has taken. Once the sync job has
+   * handed one off, deleting the row would leave the family looking at a clean
+   * screen while an agent walks a cancellation flow, which is the one lie this
+   * product cannot tell. The caller checks; this only writes.
+   */
+  withdrawPauseRequest(requestId: string): Promise<void>;
+
   /** The queue and the results together. Either alone lies about the other. */
   pauseSnapshot(): Promise<PauseSnapshot>;
 }

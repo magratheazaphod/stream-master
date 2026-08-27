@@ -7,6 +7,7 @@ import {
   isMoneyStopped,
   latestResultFor,
   pauseStateFor,
+  removeRequest,
   readQueue,
   readResults,
   requestId,
@@ -208,5 +209,86 @@ describe('what the screen may say', () => {
     expect(isMoneyStopped(pauseStateFor('sub-7', queue, confirmed), 'paused')).toBe(true);
     expect(isMoneyStopped(pauseStateFor('sub-7', queue, []), 'paused')).toBe(false);
     expect(isMoneyStopped(pauseStateFor('sub-7', queue, confirmed), 'active')).toBe(false);
+  });
+});
+
+/**
+ * The two-household rule, at the level the queue can enforce it.
+ *
+ * The gate is `approved`, and `pause-sync` pulls only approved rows. So the one
+ * thing that must never slip is an unapproved request reading as anything an
+ * agent might act on.
+ */
+describe('a request waiting on a second household', () => {
+  it('reads as awaiting-approval, never as requested', () => {
+    const queue = {
+      version: 1,
+      writtenAt: '2026-08-27T00:00:00Z',
+      requests: [
+        request({ approved: false, approvedAt: undefined, requestedHousehold: 'Duval St' }),
+      ],
+    };
+    expect(pauseStateFor('sub-7', queue, []).progress).toBe('awaiting-approval');
+  });
+
+  // Even if the sync job somehow took it, an unapproved request must not read as
+  // in-flight. Unapproved outranks every other thing the state could be.
+  it('stays awaiting-approval even when something claims to have handed it off', () => {
+    const queue = {
+      version: 1,
+      writtenAt: '2026-08-27T00:00:00Z',
+      requests: [request({ approved: false, approvedAt: undefined })],
+    };
+    expect(pauseStateFor('sub-7', queue, [], () => true).progress).toBe('awaiting-approval');
+  });
+
+  it('becomes requested once a second household approves it', () => {
+    const queue = {
+      version: 1,
+      writtenAt: '2026-08-27T00:00:00Z',
+      requests: [
+        request({
+          approved: true,
+          approvedAt: '2026-08-27T09:00:00Z',
+          requestedHousehold: 'Duval St',
+          approvedHousehold: 'Mom',
+        }),
+      ],
+    };
+    expect(pauseStateFor('sub-7', queue, []).progress).toBe('requested');
+  });
+
+  it('carries who asked and who agreed, so the pair is auditable', () => {
+    const queue = {
+      version: 1,
+      writtenAt: '2026-08-27T00:00:00Z',
+      requests: [
+        request({
+          requestedBy: 'Jesse',
+          requestedHousehold: 'Duval St',
+          approvedBy: 'Peter',
+          approvedHousehold: 'Mom',
+        }),
+      ],
+    };
+    const state = pauseStateFor('sub-7', queue, []);
+    expect(state.request?.requestedHousehold).toBe('Duval St');
+    expect(state.request?.approvedHousehold).toBe('Mom');
+  });
+});
+
+describe('taking a request back', () => {
+  it('removes it from the queue file', () => {
+    appendRequest(request(), queuePath);
+    expect(readQueue(queuePath).requests).toHaveLength(1);
+    removeRequest('req-2026-08-26-s-netflix-fairhaven', queuePath);
+    expect(readQueue(queuePath).requests).toEqual([]);
+  });
+
+  // Withdrawing is the safe direction, so an id that is not there is not an error.
+  it('leaves the file alone when the id is not there', () => {
+    appendRequest(request(), queuePath);
+    removeRequest('req-nothing-like-this', queuePath);
+    expect(readQueue(queuePath).requests).toHaveLength(1);
   });
 });

@@ -43,15 +43,34 @@ export interface PauseRequest {
    * true. Execution runs unattended; the decision does not.
    */
   approved: boolean;
-  approvedAt: string;
+  /**
+   * When the second household said yes. Absent while a request is still waiting
+   * for one, which is the only state in which `approved` is false.
+   */
+  approvedAt?: string;
+  /**
+   * Who raised it, and from which household.
+   *
+   * The household is the load-bearing half. Approval requires a person from a
+   * different one, so the request has to remember where it came from - a name
+   * alone cannot answer "is this a second pair of eyes or the same person
+   * pressing twice".
+   *
+   * Optional because a queue file written before the two-household rule existed
+   * still parses. A request with no requesting household cannot be checked
+   * against one, and the app refuses to approve it rather than waving it
+   * through.
+   */
+  requestedBy?: string;
+  requestedHousehold?: string;
+  /** The household that approved. Recorded so the pair is auditable after the fact. */
+  approvedHousehold?: string;
   /**
    * Who said yes, by name.
    *
    * Optional, and it has to be: a queue file written before this field existed
-   * still parses, and somebody who skipped the person picker can still pause
-   * their own subscription. Absent means nobody claimed it, never that the
-   * request is unapproved - `approved` alone is the gate and this field never
-   * touches it.
+   * still parses. Absent means nobody claimed it, never that the request is
+   * unapproved - `approved` alone is the gate and this field never touches it.
    *
    * Attribution and not proof. Everyone shares one password, so this records who
    * said they pressed the button rather than who provably did. For an
@@ -173,6 +192,28 @@ export function appendRequest(
   return next;
 }
 
+/**
+ * Take one request back out of the queue file.
+ *
+ * Withdrawing is the safe direction, so this is deliberately forgiving: an id
+ * that is not there leaves the file as it was rather than throwing. The caller
+ * has already decided the request may go.
+ */
+export function removeRequest(
+  requestId: string,
+  path: string = PAUSE_QUEUE_PATH,
+  now: Date = new Date(),
+): PauseQueueFile {
+  const current = readQueue(path);
+  const next: PauseQueueFile = {
+    version: PAUSE_CONTRACT_VERSION,
+    writtenAt: now.toISOString(),
+    requests: current.requests.filter((r) => r.id !== requestId),
+  };
+  writeJsonFile(path, next);
+  return next;
+}
+
 /* -- What the screen may say ------------------------------------------------ */
 
 /**
@@ -184,7 +225,8 @@ export function appendRequest(
  */
 export type PauseProgress =
   | 'none' // nobody has asked
-  | 'requested' // recorded, and no agent can see it yet
+  | 'awaiting-approval' // one household asked, and a second has not agreed yet
+  | 'requested' // approved, and no agent can see it yet
   | 'in-flight' // in the queue file, waiting on Cowork's next run
   | 'confirmed' // done, with the confirmation text the agent read
   | 'unconfirmed' // done or already, but no evidence came with it
@@ -228,6 +270,9 @@ export function pauseStateFor(
   if (!request) return { progress: 'none' };
 
   const result = latestResultFor(results, request.id);
+  // Unapproved outranks everything else a request could be. Nothing is going to
+  // happen, and nothing should read as though it might.
+  if (!request.approved) return { progress: 'awaiting-approval', request };
   if (!result) return { progress: handedOff(request.id) ? 'in-flight' : 'requested', request };
 
   const progress: PauseProgress =

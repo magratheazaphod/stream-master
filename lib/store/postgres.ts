@@ -395,12 +395,15 @@ export class PostgresCatalogStore implements CatalogStore {
     await this.sql`
       insert into pause_requests (
         id, subscription_id, service_id, service_name, household_name,
-        action, method, manage_url, approved, approved_at, approved_by, resume_by, notes
+        action, method, manage_url, approved, approved_at, approved_by,
+        requested_by, requested_household, approved_household, resume_by, notes
       ) values (
         ${request.id}, ${request.subscriptionId}, ${request.serviceId},
         ${request.serviceName}, ${request.householdName}, ${request.action},
         ${request.method}, ${request.manageUrl}, ${request.approved},
-        ${request.approvedAt}, ${request.approvedBy ?? null},
+        ${request.approvedAt ?? null}, ${request.approvedBy ?? null},
+        ${request.requestedBy ?? null}, ${request.requestedHousehold ?? null},
+        ${request.approvedHousehold ?? null},
         ${request.resumeBy ?? null}, ${request.notes ?? null}
       )
       on conflict (id) do update set
@@ -414,9 +417,26 @@ export class PostgresCatalogStore implements CatalogStore {
         approved        = excluded.approved,
         approved_at     = excluded.approved_at,
         approved_by     = excluded.approved_by,
+        requested_by        = excluded.requested_by,
+        requested_household = excluded.requested_household,
+        approved_household  = excluded.approved_household,
         resume_by       = excluded.resume_by,
         notes           = excluded.notes,
         handed_off_at   = null`;
+  }
+
+  /**
+   * Delete a request nobody has taken.
+   *
+   * `handed_off_at is null` is in the statement rather than only in the caller,
+   * because the caller reads the state and then writes, and a sync job can take
+   * the request in between. Losing the race means deleting nothing, which leaves
+   * the screen honest about an agent already holding the job.
+   */
+  async withdrawPauseRequest(requestId: string): Promise<void> {
+    await this.sql`
+      delete from pause_requests
+       where id = ${requestId} and handed_off_at is null`;
   }
 
   async pauseSnapshot(): Promise<PauseSnapshot> {
@@ -432,14 +452,18 @@ export class PostgresCatalogStore implements CatalogStore {
           method: string;
           manage_url: string;
           approved: boolean;
-          approved_at: Date;
+          approved_at: Date | null;
           approved_by: string | null;
+          requested_by: string | null;
+          requested_household: string | null;
+          approved_household: string | null;
           resume_by: string | null;
           notes: string | null;
           handed_off_at: Date | null;
         }[]
       >`select id, subscription_id, service_id, service_name, household_name, action,
-               method, manage_url, approved, approved_at, approved_by, resume_by, notes,
+               method, manage_url, approved, approved_at, approved_by,
+               requested_by, requested_household, approved_household, resume_by, notes,
                handed_off_at
           from pause_requests order by created_at`,
       this.sql<
@@ -467,9 +491,12 @@ export class PostgresCatalogStore implements CatalogStore {
           method: r.method as PauseRequest['method'],
           manageUrl: r.manage_url,
           approved: r.approved,
-          approvedAt: r.approved_at.toISOString(),
         };
+        if (r.approved_at !== null) request.approvedAt = r.approved_at.toISOString();
         if (r.approved_by !== null) request.approvedBy = r.approved_by;
+        if (r.requested_by !== null) request.requestedBy = r.requested_by;
+        if (r.requested_household !== null) request.requestedHousehold = r.requested_household;
+        if (r.approved_household !== null) request.approvedHousehold = r.approved_household;
         if (r.resume_by !== null) request.resumeBy = r.resume_by;
         if (r.notes !== null) request.notes = r.notes;
         const handedOffAt = iso(r.handed_off_at);

@@ -21,6 +21,11 @@ export default async function Home() {
   // is the everyone-view and works exactly as it did before.
   const cookie = (await cookies()).get(PERSON_COOKIE)?.value;
   const viewer = resolvePerson(cookie, catalog.people);
+  // The household, not just the name. Approval turns on which household somebody
+  // is in, so the screen has to know before it can say what a press will do.
+  const viewerHousehold = viewer
+    ? catalog.households.find((h) => h.id === viewer.householdId)
+    : undefined;
 
   const rows: Row[] = catalog.subscriptions
     .map((sub) => {
@@ -52,6 +57,18 @@ export default async function Home() {
       if (sub.resumeBy) row.resumeBy = sub.resumeBy;
       if (state.result?.evidence) row.evidence = state.result.evidence;
       if (state.request?.approvedBy) row.approvedBy = state.request.approvedBy;
+      if (state.request?.requestedBy) row.requestedBy = state.request.requestedBy;
+      if (state.request?.requestedHousehold) {
+        row.requestedHousehold = state.request.requestedHousehold;
+      }
+      // Only while something is live. A finished request must not leave a stale
+      // action behind for the next press to pick up.
+      if (
+        state.request &&
+        (state.progress === 'awaiting-approval' || state.progress === 'requested')
+      ) {
+        row.pendingAction = state.request.action;
+      }
       return row;
     })
     // The viewer's own rows lead. Everything else follows, still on the same
@@ -82,6 +99,7 @@ export default async function Home() {
         initialRows={rows}
         dataset={source}
         {...(viewer ? { viewerName: viewer.name } : {})}
+        {...(viewerHousehold ? { viewerHousehold: viewerHousehold.name } : {})}
       />
 
       <AddToCatalog
