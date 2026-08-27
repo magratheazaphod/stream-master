@@ -10,7 +10,14 @@
 import { describe, expect, it } from 'vitest';
 import { MockAvailabilityProvider } from './availability';
 import type { Catalog } from './domain';
-import { isLiveTvBundle, lookupShow, matchService, normalizeProviderName } from './show-lookup';
+import {
+  isLiveTvBundle,
+  lookupResolved,
+  lookupShow,
+  matchService,
+  normalizeProviderName,
+  suggestTitles,
+} from './show-lookup';
 import type { TmdbClient } from './tmdb/client';
 import type { Service, Subscription } from './types';
 
@@ -241,6 +248,106 @@ describe('answering a lookup', () => {
     const failing = async () => ({ kind: 'error' as const, message: 'network' });
     const client = fakeClient({ searchTv: failing, searchMovie: failing });
     const answer = await lookupShow({ client, catalog: catalogWith([]) }, 'Severance');
+    expect(answer.status).toBe('unknown');
+  });
+});
+
+/**
+ * The suggestion list. Its job is to make an ambiguous half-typed string legible
+ * before somebody commits to an answer, so what matters is that it offers the
+ * near-misses, ranks the same way the answer does, and never turns a source
+ * failure into a claim about the title.
+ */
+describe('suggesting titles', () => {
+  const manyTv = async () => ({
+    kind: 'ok' as const,
+    data: {
+      page: 1,
+      total_pages: 1,
+      total_results: 3,
+      results: [
+        { id: 2, name: 'NCIS: Los Angeles', first_air_date: '2009-09-22', popularity: 300 },
+        { id: 1, name: 'NCIS', first_air_date: '2003-09-23', popularity: 120 },
+        { id: 3, name: 'NCIS: Hawai\u2019i', first_air_date: '2021-09-20', popularity: 80 },
+      ],
+    },
+  });
+
+  it('keeps the near-misses rather than collapsing to one answer', async () => {
+    const found = await suggestTitles(fakeClient({ searchTv: manyTv }), 'NCIS');
+    expect(found).not.toBe('error');
+    if (found === 'error') return;
+    expect(found).toHaveLength(3);
+    expect(found.map((t) => t.name)).toContain('NCIS: Los Angeles');
+  });
+
+  // The exact match leads even though a spin-off is three times as popular.
+  it('ranks an exact title above a more popular near-miss', async () => {
+    const found = await suggestTitles(fakeClient({ searchTv: manyTv }), 'NCIS');
+    if (found === 'error') return;
+    expect(found[0].name).toBe('NCIS');
+  });
+
+  // One ranking rule, or the list would offer a top row that Ask disagrees with.
+  it('leads with the same title the plain lookup would answer about', async () => {
+    const client = fakeClient({ searchTv: manyTv });
+    const found = await suggestTitles(client, 'NCIS');
+    const answer = await lookupShow({ client, catalog: catalogWith([]) }, 'NCIS');
+    if (found === 'error') return;
+    expect(answer.status).not.toBe('no-match');
+    if (answer.status === 'no-match') return;
+    expect(answer.title?.tmdbId).toBe(found[0].tmdbId);
+  });
+
+  it('carries the year and the kind, which is what tells two titles apart', async () => {
+    const found = await suggestTitles(fakeClient({ searchTv: tvHit() }), 'Severance');
+    if (found === 'error') return;
+    expect(found[0]).toMatchObject({ name: 'Severance', year: 2022, kind: 'series' });
+  });
+
+  it('reports a dead search as an error, never as an empty list', async () => {
+    const dead = async () => ({ kind: 'error' as const, reason: 'network' });
+    const found = await suggestTitles(fakeClient({ searchTv: dead, searchMovie: dead }), 'Severance');
+    expect(found).toBe('error');
+  });
+
+  it('returns nothing for a query too short to mean anything', async () => {
+    const found = await suggestTitles(fakeClient({ searchTv: manyTv }), '');
+    if (found === 'error') return;
+    expect(found).toEqual([]);
+  });
+});
+
+/**
+ * Picking a suggestion answers about the title picked. Re-resolving the text
+ * would quietly swap it for the popular one and say nothing.
+ */
+describe('answering about a picked title', () => {
+  it('never re-runs the search, so the choice survives', async () => {
+    let searched = 0;
+    const client = fakeClient({
+      searchTv: async () => {
+        searched += 1;
+        return { kind: 'ok' as const, data: { page: 1, results: [], total_pages: 0, total_results: 0 } };
+      },
+      getTvWatchProviders: providers({ flatrate: [{ provider_id: 8, provider_name: 'Netflix' }] }),
+    });
+    const answer = await lookupResolved(
+      { client, catalog: catalogWith([sub({})]) },
+      { tmdbId: 4242, name: 'NCIS: Los Angeles', year: 2009, kind: 'series' },
+    );
+    expect(searched).toBe(0);
+    expect(answer.status).toBe('have-it');
+    if (answer.status !== 'have-it') return;
+    expect(answer.title.tmdbId).toBe(4242);
+    expect(answer.title.name).toBe('NCIS: Los Angeles');
+  });
+
+  it('keeps unknown meaning unknown for a picked title too', async () => {
+    const answer = await lookupResolved(
+      { client: fakeClient({}), catalog: catalogWith([]) },
+      { tmdbId: 4242, name: 'NCIS: Los Angeles', kind: 'series' },
+    );
     expect(answer.status).toBe('unknown');
   });
 });

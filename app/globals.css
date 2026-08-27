@@ -580,6 +580,54 @@ tbody tr:last-child td {
   margin-bottom: 14px;
 }
 
+/* The input and its suggestion list are one control, so the list is positioned
+   against this box rather than the form. */
+.combo {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.ask .combo input {
+  width: 100%;
+}
+
+.combo-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border-radius: 8px;
+  border: 1px solid var(--baseline);
+  background: var(--surface-1);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 28%);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.combo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Hover and keyboard share one highlight. Two would have the mouse and the
+   arrow keys disagree about which row Enter is about. */
+.combo-item.active {
+  background: var(--surface-2, rgb(255 255 255 / 7%));
+}
+
+.combo-item .dim {
+  font-size: 0.85em;
+}
+
 .ask input {
   flex: 1;
   min-width: 0;
