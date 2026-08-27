@@ -16,7 +16,8 @@
     "pause:sync": "tsx scripts/pause-sync.mts",
     "prd:snapshot": "sh scripts/snapshot-prd.sh",
     "env:fix": "node scripts/escape-env.mjs",
-    "icons": "node scripts/render-icons.mjs"
+    "icons": "node scripts/render-icons.mjs",
+    "sync:schedule": "sh scripts/install-sync-schedule.sh"
   },
   "dependencies": {
     "next": "^15.5.4",
