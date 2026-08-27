@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import type { Lookup } from '@/lib/show-lookup';
+import { useEffect, useId, useRef, useState } from 'react';
+import type { Lookup, LookupTitle } from '@/lib/show-lookup';
+import type { Suggestions } from '@/app/api/lookup/suggest/route';
 
 const usd = (n: number) =>
   n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -194,13 +195,83 @@ export function ShowLookup() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function ask(e: React.FormEvent) {
-    e.preventDefault();
-    if (query.trim() === '') return;
+  const [suggestions, setSuggestions] = useState<LookupTitle[]>([]);
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  /** Set when TMDB declined the search. Never rendered as "no such show". */
+  const [suggestFailed, setSuggestFailed] = useState(false);
+
+  const listId = useId();
+  const boxRef = useRef<HTMLDivElement>(null);
+  /** The text the open list describes. Guards against a stale response landing. */
+  const wantedRef = useRef('');
+
+  /**
+   * Fetch suggestions for what has been typed so far.
+   *
+   * Debounced, because a request per keystroke is the thing that would put the
+   * TMDB budget at risk, and aborted on the next keystroke so a slow response
+   * for "sev" cannot arrive after "severance" and repopulate the list with the
+   * wrong thing.
+   */
+  useEffect(() => {
+    const typed = query.trim();
+    wantedRef.current = typed;
+    // Mirrors MIN_SUGGEST_QUERY, which is the authority - the endpoint returns an
+    // empty list below it regardless. Repeated here only to save the round trip,
+    // rather than importing the lookup module into the browser bundle.
+    if (typed.length < 2) {
+      setSuggestions([]);
+      setSuggestFailed(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/lookup/suggest?q=${encodeURIComponent(typed)}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
+        const body = (await res.json()) as Suggestions;
+        if (wantedRef.current !== typed) return;
+        if (body.status === 'unknown') {
+          // A source that did not answer is not a source that said no.
+          setSuggestFailed(true);
+          setSuggestions([]);
+          return;
+        }
+        setSuggestFailed(false);
+        setSuggestions(body.suggestions);
+        setActive(-1);
+        if (body.suggestions.length > 0) setOpen(true);
+      } catch {
+        // An abort is the normal case here, and a network failure leaves the
+        // list as it was rather than asserting anything about the title.
+      }
+    }, 250);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
+
+  // A click outside closes the list. Escape does too, from the keyboard.
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, []);
+
+  async function run(url: string) {
+    setOpen(false);
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/lookup?q=${encodeURIComponent(query)}`);
+      const res = await fetch(url);
       if (!res.ok) {
         setError('The lookup failed. Nothing is known either way.');
         setAnswer(null);
@@ -215,21 +286,108 @@ export function ShowLookup() {
     }
   }
 
+  /**
+   * Ask about a title the person picked.
+   *
+   * The id goes with it, so the answer is about the row they clicked rather than
+   * about whatever their half-typed text would have resolved to.
+   */
+  function choose(title: LookupTitle) {
+    setQuery(title.name);
+    wantedRef.current = title.name;
+    setSuggestions([]);
+    void run(
+      `/api/lookup?tmdbId=${title.tmdbId}&kind=${title.kind}` +
+        `&name=${encodeURIComponent(title.name)}${title.year ? `&year=${title.year}` : ''}`,
+    );
+  }
+
+  function ask(e: React.FormEvent) {
+    e.preventDefault();
+    if (query.trim() === '') return;
+    // Enter on a highlighted row means that row, not the typed text.
+    if (open && active >= 0 && suggestions[active]) {
+      choose(suggestions[active]);
+      return;
+    }
+    void run(`/api/lookup?q=${encodeURIComponent(query)}`);
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Escape') {
+      setOpen(false);
+      return;
+    }
+    if (suggestions.length === 0) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      setOpen(true);
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      setActive((i) => {
+        const next = i + step;
+        if (next < 0) return suggestions.length - 1;
+        if (next >= suggestions.length) return 0;
+        return next;
+      });
+    }
+  }
+
   return (
     <section>
       <h2>Can we watch it</h2>
       <form className="ask" onSubmit={ask}>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Name a show or a film"
-          aria-label="Name a show or a film"
-        />
+        <div className="combo" ref={boxRef}>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onKeyDown}
+            onFocus={() => suggestions.length > 0 && setOpen(true)}
+            placeholder="Name a show or a film"
+            aria-label="Name a show or a film"
+            role="combobox"
+            aria-expanded={open}
+            aria-controls={listId}
+            aria-autocomplete="list"
+            aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
+            autoComplete="off"
+          />
+          {open && suggestions.length > 0 && (
+            <ul className="combo-list" id={listId} role="listbox">
+              {suggestions.map((t, i) => (
+                <li
+                  key={`${t.kind}-${t.tmdbId}`}
+                  id={`${listId}-${i}`}
+                  role="option"
+                  aria-selected={i === active}
+                  className={`combo-item${i === active ? ' active' : ''}`}
+                  // Mouse down rather than click: blur would close the list first.
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    choose(t);
+                  }}
+                  onMouseEnter={() => setActive(i)}
+                >
+                  <span className="strong">{t.name}</span>
+                  <span className="dim">
+                    {t.year ? `${t.year}, ` : ''}
+                    {t.kind === 'series' ? 'series' : 'film'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <button type="submit" className="btn" disabled={busy || query.trim() === ''}>
           {busy ? 'Asking' : 'Ask'}
         </button>
       </form>
+      {suggestFailed && (
+        <p className="note">
+          TMDB is not answering the search, so there are no suggestions to show. That is a
+          gap in the source, not a sign the title does not exist - asking still works.
+        </p>
+      )}
       {error && <p className="note bad-text">{error}</p>}
       {answer && <Answer answer={answer} />}
     </section>

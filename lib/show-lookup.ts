@@ -167,11 +167,41 @@ function pathFor(c: Catalog, service: Service): Path {
 
 /* -- The lookup ------------------------------------------------------------- */
 
-/** Both search endpoints, so a typed title resolves whether it is a show or a film. */
-async function resolveTitle(
+/** Shortest typed string worth searching on. See `suggestTitles`. */
+export const MIN_SUGGEST_QUERY = 2;
+
+/**
+ * The candidates for a typed string, best first.
+ *
+ * This is the one ranking rule in the module, and both callers go through it:
+ * the suggestion list the person picks from, and the answer they get if they
+ * press Ask without picking. Two rules would let the screen offer a list whose
+ * top entry is not what Ask would have answered about, which is a worse
+ * confusion than no list at all.
+ *
+ * Search only. No provider call happens here, so a keystroke costs the two
+ * search requests and nothing more - the budget in `docs/tmdb-coverage.md`
+ * survives a typeahead only on that condition.
+ */
+export async function suggestTitles(
   client: TmdbClient,
   query: string,
-): Promise<LookupTitle | undefined | 'error'> {
+  limit = 7,
+): Promise<LookupTitle[] | 'error'> {
+  // One or two characters match most of TMDB, so the list would rank the whole
+  // catalogue by popularity and suggest nothing about what was typed. The rule
+  // lives here rather than in the route: it is a statement about what counts as
+  // a suggestion, not about HTTP.
+  if (query.trim().length < MIN_SUGGEST_QUERY) return [];
+  const ranked = await rankCandidates(client, query);
+  return ranked === 'error' ? 'error' : ranked.slice(0, limit).map(({ popularity: _p, ...t }) => t);
+}
+
+/** Both search endpoints, so a typed title resolves whether it is a show or a film. */
+async function rankCandidates(
+  client: TmdbClient,
+  query: string,
+): Promise<(LookupTitle & { popularity: number })[] | 'error'> {
   const [tv, movie] = await Promise.all([client.searchTv(query), client.searchMovie(query)]);
   if (tv.kind === 'error' && movie.kind === 'error') return 'error';
 
@@ -198,14 +228,25 @@ async function resolveTitle(
       });
     }
   }
-  if (candidates.length === 0) return undefined;
-
   // An exact title match beats a popular near-miss. Somebody typing "Andor"
   // means Andor, not the better-known thing that mentions it in a subtitle.
+  // Ranked rather than filtered, because the near-misses are exactly what makes
+  // a suggestion list worth showing: the person who typed the ambiguous thing is
+  // the person who needs to see the alternatives.
   const typed = query.trim().toLowerCase();
-  const exact = candidates.filter((c) => c.name.toLowerCase() === typed);
-  const pool = exact.length > 0 ? exact : candidates;
-  const { popularity: _p, ...title } = pool.sort((a, b) => b.popularity - a.popularity)[0];
+  const score = (c: { name: string }) => (c.name.toLowerCase() === typed ? 1 : 0);
+  return candidates.sort((a, b) => score(b) - score(a) || b.popularity - a.popularity);
+}
+
+/** The single best candidate, which is the first of the ranked list. */
+async function resolveTitle(
+  client: TmdbClient,
+  query: string,
+): Promise<LookupTitle | undefined | 'error'> {
+  const ranked = await rankCandidates(client, query);
+  if (ranked === 'error') return 'error';
+  if (ranked.length === 0) return undefined;
+  const { popularity: _p, ...title } = ranked[0];
   return title;
 }
 
@@ -246,6 +287,24 @@ export async function lookupShow({ client, catalog }: LookupDeps, query: string)
     return { status: 'unknown', query: trimmed, reason: 'TMDB did not answer the search' };
   }
   if (!title) return { status: 'no-match', query: trimmed };
+
+  return lookupResolved({ client, catalog }, title, trimmed);
+}
+
+/**
+ * Answer for a title already resolved, skipping the search entirely.
+ *
+ * This is what a picked suggestion goes through. Re-resolving the text would
+ * throw away the choice: somebody who typed "NCIS" and deliberately picked
+ * "NCIS: Los Angeles" would get an answer about the wrong show, and nothing on
+ * the screen would tell them it had happened.
+ */
+export async function lookupResolved(
+  { client, catalog }: LookupDeps,
+  title: LookupTitle,
+  query: string = title.name,
+): Promise<Lookup> {
+  const trimmed = query.trim();
 
   const providers: TmdbResult<{ results: Record<string, TmdbCountryWatchProviders> }> =
     title.kind === 'series'
