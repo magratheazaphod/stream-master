@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>stream-master - Launch</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #1b1d21;
+    --muted: #5c6370;
+    --rule: #e2e4e9;
+    --accent: #2f6f5e;
+    --panel: #f6f7f9;
+    --bg: #fdfdfc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e6e7ea; --muted: #a0a6b0; --rule: #33363d;
+      --accent: #7fc8b0; --panel: #1e2126; --bg: #14161a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 3.5rem 1.5rem 6rem;
+    background: var(--bg);
+    color: var(--ink);
+    font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 42rem; margin: 0 auto; }
+  h1 {
+    font-size: 2rem; line-height: 1.2; letter-spacing: -0.02em;
+    margin: 0 0 1.75rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--accent);
+  }
+  h2 {
+    font-size: 1.2rem; letter-spacing: -0.01em; margin: 2.5rem 0 0.75rem;
+    color: var(--accent);
+  }
+  h3 { font-size: 1.02rem; margin: 1.75rem 0 0.5rem; }
+  p, li { margin: 0 0 0.85rem; }
+  ul, ol { padding-left: 1.25rem; }
+  li::marker { color: var(--muted); }
+  strong { font-weight: 650; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  hr { border: 0; border-top: 1px solid var(--rule); margin: 2.5rem 0; }
+  blockquote {
+    margin: 1.25rem 0; padding: 0.5rem 1.1rem;
+    border-left: 3px solid var(--rule); color: var(--muted);
+  }
+  code {
+    font: 0.87em/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--panel); border-radius: 4px; padding: 0.12em 0.35em;
+  }
+  pre {
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 8px;
+    padding: 0.9rem 1.1rem; overflow-x: auto;
+  }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.25rem 0; }
+  th, td { text-align: left; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--rule); }
+  th { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  footer {
+    max-width: 42rem; margin: 3.5rem auto 0; padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.8rem; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<main>
+<h1>stream-master</h1>
+<h2>The launch</h2>
+<p>stream-master puts every streaming subscription the family pays for on one screen,
+ranks the shows people actually want and returns a twelve-month calendar naming which
+household carries which service in which month. It replaces the group chat where
+nobody knows who is already paying for Max, and it needs no shared password. Three
+screens run today on sample data: the landscape, the shared watchlist and the plan.</p>
+<h2>FAQ</h2>
+<p><strong>Can I put my own subscriptions in yet?</strong>
+Not by typing them in. There is no sign-in and no form, so the screens run on
+invented family data that shows exactly what the tool will say once real rows go in.
+Entering your own is the next thing we build.</p>
+<p><strong>The plan turns $2,002.56 a year into $269.78. Is that real?</strong>
+The arithmetic is real and the data is not. That comes from eight invented people,
+twelve invented subscriptions and prices typed by hand, so read it as the shape of
+the answer rather than your answer.</p>
+<p><strong>Does everyone see what I pay?</strong>
+Yes. Every adult sees every subscription, its price and who is paying. That is how
+the sample family finds four households paying separately for Netflix and three
+paying for Max, and it is not a tool you can use while keeping your spend private.</p>
+<p><strong>Do I have to keep cancelling and resubscribing?</strong>
+That is the cost, and it is the honest one. A household drops a service when the
+season ends and picks it up when the next one starts - a few minutes on the
+provider&#39;s own site, several times a year. stream-master never holds your password
+and never clicks cancel for you.</p>
+<p><strong>Can it be wrong about where a show is?</strong>
+It can be unsure, and it says so instead of guessing. When nothing confirms a service
+carries a title, the plan leaves it unscheduled - one film on the sample watchlist
+sits there now - so you see the gap rather than a bad month.</p>
+</main>
+<footer>Generated from LAUNCH.md by scripts/render-html.mjs. Edit the Markdown, not this file.</footer>
+</body>
+</html>

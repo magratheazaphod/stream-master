@@ -1,13 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-
-const links = [
-  { href: '/', label: 'Landscape' },
-  { href: '/watchlist', label: 'Watchlist' },
-  { href: '/plan', label: 'Plan' },
-];
+import type { DatasetSource } from '@/lib/catalog';
 
 function Owl() {
   return (
@@ -22,25 +16,40 @@ function Owl() {
   );
 }
 
-export function Masthead() {
-  const path = usePathname();
+/**
+ * Which dataset is on screen, stated on every page.
+ *
+ * Both states get a badge, not just the demo one. Naming only the demo case
+ * would leave real household spend looking like an unlabelled default, and the
+ * screenshot of real money mistaken for fiction is the worse of the two errors.
+ */
+function DatasetBadge({ dataset }: { dataset: DatasetSource }) {
+  const demo = dataset === 'demo';
+  return (
+    <span
+      className={`dataset ${demo ? 'demo' : 'private'}`}
+      title={
+        demo
+          ? 'Invented households and prices from lib/demo-data.ts. Nothing here is real.'
+          : 'Loaded from the family tables in Postgres, or data/family.json on a laptop. Real household spend.'
+      }
+    >
+      <i className="dot" aria-hidden="true" />
+      {demo ? 'Demo data' : 'Family data'}
+    </span>
+  );
+}
+
+/** One screen, so no nav. The dataset badge stays: it is the only thing on this
+ *  header that changes what the numbers below it mean. */
+export function Masthead({ dataset }: { dataset: DatasetSource }) {
   return (
     <header className="masthead">
       <Link href="/" className="wordmark">
         <Owl />
         stream<span>master</span>
       </Link>
-      <nav>
-        {links.map((l) => (
-          <Link
-            key={l.href}
-            href={l.href}
-            aria-current={path === l.href ? 'page' : undefined}
-          >
-            {l.label}
-          </Link>
-        ))}
-      </nav>
+      <DatasetBadge dataset={dataset} />
     </header>
   );
 }

@@ -2,37 +2,36 @@
 
 ## The launch
 
-Nothing ships yet. stream-master today is a plan and a repo: no app, no login, no
-data, nothing a family member can open. What we are building first is a shared
-inventory - every streaming subscription across the family's households, with what
-each one costs and when it renews - so that six to eight relatives who currently
-guess at the total can finally see it.
+stream-master puts every streaming subscription the family pays for on one screen,
+ranks the shows people actually want and returns a twelve-month calendar naming which
+household carries which service in which month. It replaces the group chat where
+nobody knows who is already paying for Max, and it needs no shared password. Three
+screens run today on sample data: the landscape, the shared watchlist and the plan.
 
 ## FAQ
 
-**What will I actually do with it?**
-You sign in with Google, enter the services you pay for with price and billing
-term, and see the whole family's list beside your own. The first thing it shows
-you is duplicate coverage: two households paying separately for the same service.
+**Can I put my own subscriptions in yet?**
+Not by typing them in. There is no sign-in and no form, so the screens run on
+invented family data that shows exactly what the tool will say once real rows go in.
+Entering your own is the next thing we build.
 
-**Can everyone see what I pay?**
-Yes. Every adult in the family sees every subscription and every price, including
-yours. You cannot spot duplicate coverage while hiding who pays for what, so we
-chose the shared view deliberately - if that trade is wrong for you, this tool is
-not for you.
+**The plan turns $2,002.56 a year into $269.78. Is that real?**
+The arithmetic is real and the data is not. That comes from eight invented people,
+twelve invented subscriptions and prices typed by hand, so read it as the shape of
+the answer rather than your answer.
 
-**Does this mean we all share logins?**
-No. Netflix, Disney+ and most major services enforce household boundaries by IP
-address and device, so an app telling cousins in different cities to share a
-password would just get accounts locked. The savings come from sequencing instead:
-households take turns carrying a service month to month rather than everyone
-holding everything all year.
+**Does everyone see what I pay?**
+Yes. Every adult sees every subscription, its price and who is paying. That is how
+the sample family finds four households paying separately for Netflix and three
+paying for Max, and it is not a tool you can use while keeping your spend private.
 
-**How much will it save us?**
-We do not know, and we will not guess. The point of building the inventory first
-is to produce a real number from your actual subscriptions rather than a promised
-one from ours.
+**Do I have to keep cancelling and resubscribing?**
+That is the cost, and it is the honest one. A household drops a service when the
+season ends and picks it up when the next one starts - a few minutes on the
+provider's own site, several times a year. stream-master never holds your password
+and never clicks cancel for you.
 
-**Will it tell me which service has the show I want?**
-Later. That needs a licensed availability feed and it is not in the first build -
-inventory and cost come first, because they work with data the family already has.
+**Can it be wrong about where a show is?**
+It can be unsure, and it says so instead of guessing. When nothing confirms a service
+carries a title, the plan leaves it unscheduled - one film on the sample watchlist
+sits there now - so you see the gap rather than a bad month.

@@ -1,0 +1,92 @@
+{
+  "_comment": "Copy this to data/family.json and fill it with your own households. data/family.json is gitignored and this example is the only file under data/ that git tracks. Every id here is arbitrary, but the cross-references have to line up: the app refuses a file whose joins do not hold.",
+  "country": "US",
+  "households": [
+    { "id": "h-1", "name": "Example One", "location": "Springfield, IL" },
+    { "id": "h-2", "name": "Example Two", "location": "Shelbyville, IL" }
+  ],
+  "people": [
+    { "id": "p-1", "name": "First Person", "householdId": "h-1" },
+    { "id": "p-2", "name": "Second Person", "householdId": "h-1" },
+    { "id": "p-3", "name": "Third Person", "householdId": "h-2" }
+  ],
+  "_pause": "The pause block on a service is what somebody recorded by walking that provider's flow by hand. Leave it out until you have walked it: no block means the app offers no button, which is the honest answer. method is native-pause, cancel-resubscribe or store-managed. maxPauseMonths belongs to native-pause and nowhere else. costs lists what stopping loses beyond money, from downloads, watch-list, profiles, grandfathered-price and annual-term-forfeit, and an empty list means you checked and found nothing.",
+  "services": [
+    {
+      "id": "s-a",
+      "name": "Service A",
+      "monthlyPrice": 17.99,
+      "sharingPolicy": "household-only",
+      "extraMemberPrice": 7.99,
+      "pause": {
+        "method": "cancel-resubscribe",
+        "manageUrl": "https://example.test/account/cancel",
+        "costs": ["downloads", "watch-list"],
+        "verifiedOn": "2026-07-20"
+      }
+    },
+    {
+      "id": "s-b",
+      "name": "Service B",
+      "monthlyPrice": 9.99,
+      "sharingPolicy": "household-only",
+      "pause": {
+        "method": "native-pause",
+        "manageUrl": "https://example.test/b/account",
+        "maxPauseMonths": 3,
+        "costs": [],
+        "verifiedOn": "2026-07-20"
+      }
+    },
+    { "id": "s-c", "name": "Service C", "monthlyPrice": 8.99, "sharingPolicy": "two-adults" }
+  ],
+  "_subscriptions": "status is active or paused, and leaving it out means active. A paused row must carry pausedOn, and should carry resumeBy so the app can raise the date before somebody loses a show. lastUsedOn is self-declared: leaving it out means nobody has answered, which is not the same as nobody watching.",
+  "subscriptions": [
+    {
+      "id": "sub-1",
+      "serviceId": "s-a",
+      "householdId": "h-1",
+      "payerId": "p-1",
+      "monthlyCost": 17.99,
+      "billingCycle": "monthly",
+      "renewsOn": "2026-08-14",
+      "status": "active",
+      "lastUsedOn": "2026-07-22"
+    },
+    {
+      "id": "sub-2",
+      "serviceId": "s-b",
+      "householdId": "h-2",
+      "payerId": "p-3",
+      "monthlyCost": 6.66,
+      "billingCycle": "annual",
+      "renewsOn": "2026-11-30",
+      "status": "paused",
+      "pausedOn": "2026-06-01",
+      "resumeBy": "2026-09-01",
+      "lastUsedOn": "2026-05-28"
+    }
+  ],
+  "titles": [
+    { "id": "t-1", "name": "Example Series", "year": 2025, "kind": "series", "plannedMonth": 0 },
+    { "id": "t-2", "name": "Example Film", "year": 2024, "kind": "film", "plannedMonth": 2 }
+  ],
+  "interests": [
+    { "titleId": "t-1", "personId": "p-1" },
+    { "titleId": "t-1", "personId": "p-3" },
+    { "titleId": "t-2", "personId": "p-2" }
+  ],
+  "availability": {
+    "t-1": {
+      "series": [{ "serviceId": "s-a", "kind": "flatrate" }],
+      "seasons": {
+        "1": [{ "serviceId": "s-a", "kind": "flatrate" }],
+        "2": null
+      }
+    },
+    "t-2": [
+      { "serviceId": "s-b", "kind": "flatrate" },
+      { "serviceId": "s-c", "kind": "rent" }
+    ]
+  }
+}

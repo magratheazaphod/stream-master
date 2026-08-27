@@ -64,6 +64,15 @@ Field notes:
 - **Success criteria** must be falsifiable. "Users find it helpful" fails. Name the
   number, the threshold or the observable behaviour.
 
+## The browsable copy
+
+After you write `SUBMISSION.md`, run `npm run docs`. It renders both Markdown
+artifacts to `SUBMISSION.html` and `LAUNCH.html`, styled for reading in a browser.
+
+The Markdown is the source of truth. The HTML is generated output, so never write
+or edit it by hand and never let a claim reach it that is not in the Markdown. If
+the rendering itself needs to change, change `scripts/render-html.mjs`.
+
 ## Writing standard
 
 Follow `CLAUDE.md` exactly: active voice, brevity, real vocabulary, no Oxford comma,

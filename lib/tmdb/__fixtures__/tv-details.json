@@ -1,0 +1,36 @@
+{
+  "id": 1396,
+  "name": "Breaking Bad",
+  "overview": "A high school chemistry teacher turned methamphetamine producer partners with a former student.",
+  "first_air_date": "2008-01-20",
+  "last_air_date": "2013-09-29",
+  "status": "Ended",
+  "number_of_seasons": 5,
+  "number_of_episodes": 62,
+  "genres": [
+    { "id": 18, "name": "Drama" },
+    { "id": 80, "name": "Crime" }
+  ],
+  "origin_country": ["US"],
+  "original_language": "en",
+  "seasons": [
+    {
+      "id": 3572,
+      "season_number": 1,
+      "name": "Season 1",
+      "overview": "High school chemistry teacher Walter White finds out he has cancer.",
+      "air_date": "2008-01-20",
+      "episode_count": 7,
+      "poster_path": "/1BP4xYv9ZG4ZKMD1UyH3ETVSXeh.jpg"
+    },
+    {
+      "id": 3573,
+      "season_number": 2,
+      "name": "Season 2",
+      "overview": "Walt and Jesse face the aftermath of season one.",
+      "air_date": "2009-03-08",
+      "episode_count": 13,
+      "poster_path": "/e3oGYpoTUhOFK0BJfloru5ZmGV.jpg"
+    }
+  ]
+}

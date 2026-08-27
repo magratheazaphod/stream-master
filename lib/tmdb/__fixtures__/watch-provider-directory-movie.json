@@ -1,0 +1,16 @@
+{
+  "results": [
+    {
+      "provider_id": 2,
+      "provider_name": "Apple TV",
+      "logo_path": "/peURlLlr8jggOwK53fJ5wdQl05y.jpg",
+      "display_priorities": { "US": 2, "GB": 4 }
+    },
+    {
+      "provider_id": 3,
+      "provider_name": "Google Play Movies",
+      "logo_path": "/tbEdFQDwx5LEVr8WpSeXQSIirVq.jpg",
+      "display_priorities": { "US": 3, "GB": 5 }
+    }
+  ]
+}

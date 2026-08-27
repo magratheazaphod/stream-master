@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>stream-master - PRD</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #1b1d21;
+    --muted: #5c6370;
+    --rule: #e2e4e9;
+    --accent: #2f6f5e;
+    --panel: #f6f7f9;
+    --bg: #fdfdfc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e6e7ea; --muted: #a0a6b0; --rule: #33363d;
+      --accent: #7fc8b0; --panel: #1e2126; --bg: #14161a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 3.5rem 1.5rem 6rem;
+    background: var(--bg);
+    color: var(--ink);
+    font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 42rem; margin: 0 auto; }
+  h1 {
+    font-size: 2rem; line-height: 1.2; letter-spacing: -0.02em;
+    margin: 0 0 1.75rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--accent);
+  }
+  h2 {
+    font-size: 1.2rem; letter-spacing: -0.01em; margin: 2.5rem 0 0.75rem;
+    color: var(--accent);
+  }
+  h3 { font-size: 1.02rem; margin: 1.75rem 0 0.5rem; }
+  p, li { margin: 0 0 0.85rem; }
+  ul, ol { padding-left: 1.25rem; }
+  li::marker { color: var(--muted); }
+  strong { font-weight: 650; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  hr { border: 0; border-top: 1px solid var(--rule); margin: 2.5rem 0; }
+  blockquote {
+    margin: 1.25rem 0; padding: 0.5rem 1.1rem;
+    border-left: 3px solid var(--rule); color: var(--muted);
+  }
+  code {
+    font: 0.87em/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--panel); border-radius: 4px; padding: 0.12em 0.35em;
+  }
+  pre {
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 8px;
+    padding: 0.9rem 1.1rem; overflow-x: auto;
+  }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.25rem 0; }
+  th, td { text-align: left; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--rule); }
+  th { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  footer {
+    max-width: 42rem; margin: 3.5rem auto 0; padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.8rem; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<main>
+<h1>Submission</h1>
+<h2>The problem I chose</h2>
+<p>Eight adults in my extended family, spread across four households, pay for streaming
+separately and cannot see what the others carry. Four households pay for Netflix.
+Three pay for Max. Somebody holds Paramount+ for eleven months past the season that
+justified it. Nobody is careless - the information does not exist anywhere.</p>
+<p>The obvious fix, one shared login, is dead. Netflix, Disney+ and the rest enforce
+household boundaries by IP and device, so a product built on password sharing breaks
+within a month and takes the family&#39;s trust with it. stream-master bets on the play
+that still works: <strong>sequencing</strong>. Services are month-to-month rentals. If the family
+knows what it wants to watch and when, each service gets held only in the months that
+earn it. On the demo dataset that turns $2,003 a year into $270.</p>
+<h2>One-page PRD</h2>
+<ul>
+<li><p><strong>Problem / who it&#39;s for:</strong> Eight technically comfortable adults in one extended
+family across four households. They hold overlapping subscriptions, cannot see each
+other&#39;s spend and cannot legally share logins. They need the combined picture and a
+schedule before anyone cancels anything.</p>
+</li>
+<li><p><strong>What it does (and explicitly what&#39;s out of scope):</strong> Three screens. The landscape
+shows every subscription with price, payer, renewal date and the sharing the
+provider actually permits, and flags the services paid for twice. The shared
+watchlist ranks titles by how many family members want them and prices the cheapest
+way in, including rent and buy. The plan turns the watchlist into a twelve-month
+calendar naming which household carries which service in which month. Out of scope
+by decision: no credential storage and no agentic cancellation, ever - the app
+proposes and a human executes on the provider&#39;s own site; no row-level security,
+because eight close relatives seeing who pays for what is the feature; no payment
+splitting or settlement; no viewing-history ingestion; no scale design past a few
+dozen users. The family&#39;s own numbers stay out of the repository too. They live in
+an ignored <code>data/family.json</code>, and a malformed one throws rather than falling back
+to demo figures, because a reader who cannot tell the two datasets apart will
+eventually publish the wrong one.</p>
+</li>
+<li><p><strong>How it couples to the demand plan:</strong> It is the whole engine. Every title carries
+the month the family intends to watch it, and the plan places services only against
+those months. A service nobody named gets listed as unjustified - on the demo data
+that is Netflix at $648 a year, plus Hulu, Prime Video and Paramount+. The coupling
+is strict enough to refuse what it cannot verify: The Brutalist has no confirmed
+availability, so it lands in the unplaced list rather than being guessed into a
+month.</p>
+</li>
+<li><p><strong>How a human and the agent co-work:</strong> A family member delegates by adding titles
+they want and the month they want them. The agent returns the calendar with the
+dollar delta, the season-level warnings and the titles it could not place. The
+review point sits with whoever holds the card: the app never cancels, pauses or
+starts a subscription. A human executes on the provider&#39;s site and marks it done.
+Redirect happens by pinning a subscription, correcting a sharing flag or moving a
+title&#39;s planned month.</p>
+</li>
+<li><p><strong>Success criteria:</strong> All eight members enter their subscriptions within two weeks
+and refresh quarterly. The first landscape on the real family file names at least
+two duplicated services and $50 a month of redundant spend nobody had counted - the
+demo file yields exactly two, Netflix and Max, at $88 redundant. Combined monthly
+spend falls 25% within one billing quarter and stays there; the demo claims 87%, so
+25% is the floor that keeps the thesis alive. At least two cross-household handoffs
+complete without anyone losing a show mid-season. Zero titles scheduled onto a
+service that does not carry every season, checked against the partial-placement list
+on every plan render.</p>
+</li>
+</ul>
+<h2>Prototype</h2>
+<p>A Next.js and TypeScript app running against a local dataset, with 58 tests covering
+the domain rules, the catalog loader and the TMDB client.</p>
+<pre><code>npm install
+npm run dev     # http://localhost:3200
+npm test
+</code></pre>
+<p>Three routes: <code>/</code> landscape, <code>/watchlist</code> and <code>/plan</code>. Every page carries a badge
+naming which dataset is on screen. Without a private file the app runs the committed
+demo data, and swapping either one for Postgres means changing <code>loadCatalog</code> and
+nothing else. Availability sits behind a vendor-neutral seam with a fixture provider
+today. A complete TMDB client ships with retry, typed errors and season-level provider
+calls, and nothing calls it yet - the adapter joining it to the seam is the next piece
+of work and the only thing between the plan and real data.</p>
+<p>The hardest decision in the build is that unknown never means unavailable. A source
+that fails, times out or has no record produces unknown, which the plan refuses to
+schedule rather than quietly dropping.</p>
+<p>The README still ranks one-press pause and the idle-service alarm P0. Neither exists.
+What shipped is the rotation engine the README ranks P1, because sequencing is the
+claim worth testing first and pause mapping is hand work that proves nothing. Trust
+the code for the current priority order.</p>
+<h2>Customer-facing artifact</h2>
+<p>The launch PR/FAQ, written for the relative who has to enter their subscriptions
+before any of this pays off: <a href="LAUNCH.md">LAUNCH.md</a>.</p>
+<h2>Notes</h2>
+<p>The riskiest assumption is behavioural, not technical. Rotating four times a year is
+more friction than paying $17 a month to not think about it, and the demo&#39;s 87% saving
+assumes the family cancels on cue. If two handoffs fail, this is a spend-visibility
+tool and the plan screen is decoration.</p>
+<p>The second risk is data. TMDB&#39;s series-level watch-provider response is a union across
+seasons, so a show listed on one service may carry only half of it there. The domain
+handles that split already - it prefers a complete carrier over a cheaper partial one
+and names the stranding when every option runs short. Nobody has measured how often
+TMDB&#39;s seasons disagree with its own series answer. That spike, specified in
+<code>docs/tmdb-integration.md</code>, gates whether TMDB can be the sole source, and with more
+time I would run it before writing another line of product code.</p>
+</main>
+<footer>Generated from SUBMISSION.md by scripts/render-html.mjs. Edit the Markdown, not this file.</footer>
+</body>
+</html>

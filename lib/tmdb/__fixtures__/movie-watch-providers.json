@@ -1,0 +1,15 @@
+{
+  "id": 27205,
+  "results": {
+    "US": {
+      "link": "https://www.themoviedb.org/movie/27205-inception/watch?locale=US",
+      "rent": [
+        { "provider_id": 2, "provider_name": "Apple TV", "logo_path": "/peURlLlr8jggOwK53fJ5wdQl05y.jpg", "display_priority": 2 }
+      ],
+      "buy": [
+        { "provider_id": 2, "provider_name": "Apple TV", "logo_path": "/peURlLlr8jggOwK53fJ5wdQl05y.jpg", "display_priority": 2 },
+        { "provider_id": 3, "provider_name": "Google Play Movies", "logo_path": "/tbEdFQDwx5LEVr8WpSeXQSIirVq.jpg", "display_priority": 3 }
+      ]
+    }
+  }
+}

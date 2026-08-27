@@ -1,0 +1,13 @@
+{
+  "id": 27205,
+  "title": "Inception",
+  "overview": "A thief who steals corporate secrets through dream-sharing technology is given the inverse task of planting an idea.",
+  "release_date": "2010-07-15",
+  "runtime": 148,
+  "status": "Released",
+  "genres": [
+    { "id": 28, "name": "Action" },
+    { "id": 878, "name": "Science Fiction" }
+  ],
+  "original_language": "en"
+}
