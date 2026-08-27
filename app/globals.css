@@ -643,8 +643,13 @@ button.btn:disabled {
   cursor: default;
 }
 
+/* Dark text on the bright accent, and only there. `.btn.off` is transparent, so
+   the same colour on it painted the label in the page background - the person
+   picker drew every unselected name at a contrast ratio of 1:1. `:not(.off)`
+   rather than a higher-specificity override on `.off`, because the rule was
+   always about the filled button and never about the outlined one. */
 @media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme='light'])) .btn {
+  :root:where(:not([data-theme='light'])) .btn:not(.off) {
     color: #0a1011;
   }
 }
