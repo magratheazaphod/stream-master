@@ -46,6 +46,12 @@ export type PauseMethod =
  * press the button, so the app has to know them per service rather than assume
  * the only cost is the price.
  */
+/**
+ * Whether pressing the button stops the money now or at the next renewal. The
+ * distinction is invisible on the provider's page and expensive to assume.
+ */
+export type BillingStopsAt = 'immediately' | 'next-billing-date';
+
 export type PauseCost =
   | 'downloads' // offline copies go
   | 'watch-list' // saved list does not survive
@@ -64,6 +70,19 @@ export interface PauseTerms {
   manageUrl: string;
   /** Longest pause the provider allows, in months. Native pause only. */
   maxPauseMonths?: number;
+  /**
+   * When billing actually stops once somebody presses the button.
+   *
+   * Hulu is the reason this exists. Its pause begins at the next billing date,
+   * not on the day it is requested, so the household keeps watching and keeps
+   * paying until then. Computing a resume date from the day of the request
+   * understates it by up to a full billing period and tells the family a
+   * service is back before it is.
+   *
+   * Absent means nobody established it on the walkthrough. That is unknown, not
+   * `immediately`, and the screen says nothing rather than guessing.
+   */
+  billingStopsAt?: BillingStopsAt;
   /** Empty means the walkthrough found nothing lost, not that nobody checked. */
   costs: PauseCost[];
   /** ISO date somebody last walked this flow. */

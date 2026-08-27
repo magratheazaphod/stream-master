@@ -39,6 +39,15 @@ export default async function Home() {
         hasTerms: service.pause !== undefined,
         pauseCosts: service.pause?.costs ?? [],
       };
+      // Absent stays absent, so the row can tell "nobody walked this flow" from
+      // "the flow was walked and this is what it does".
+      if (service.pause) row.pauseMethod = service.pause.method;
+      if (service.pause?.maxPauseMonths !== undefined) {
+        row.maxPauseMonths = service.pause.maxPauseMonths;
+      }
+      if (service.pause?.billingStopsAt !== undefined) {
+        row.billingStopsAt = service.pause.billingStopsAt;
+      }
       if (viewer && sub.payerId === viewer.id) row.mine = true;
       if (sub.resumeBy) row.resumeBy = sub.resumeBy;
       if (state.result?.evidence) row.evidence = state.result.evidence;

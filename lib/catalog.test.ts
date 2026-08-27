@@ -169,6 +169,53 @@ describe('checking a private file', () => {
     expect(file.services[0].pause).toEqual(pause);
   });
 
+  // Absent must stay absent. Defaulting it to `immediately` would turn "nobody
+  // checked" into a claim about when the family stops paying.
+  it('leaves billingStopsAt undefined when the walkthrough did not establish it', () => {
+    const pause = {
+      method: 'native-pause',
+      manageUrl: 'https://example.test/account',
+      maxPauseMonths: 3,
+      costs: [],
+      verifiedOn: '2026-07-20',
+    };
+    const file = parseFamilyFile(
+      withValid({ services: [{ ...valid.services[0], pause }] }),
+      '/tmp/family.json',
+    );
+    expect(file.services[0].pause?.billingStopsAt).toBeUndefined();
+  });
+
+  it('keeps a recorded billingStopsAt', () => {
+    const pause = {
+      method: 'native-pause',
+      manageUrl: 'https://example.test/account',
+      maxPauseMonths: 2,
+      billingStopsAt: 'next-billing-date',
+      costs: [],
+      verifiedOn: '2026-08-26',
+    };
+    const file = parseFamilyFile(
+      withValid({ services: [{ ...valid.services[0], pause }] }),
+      '/tmp/family.json',
+    );
+    expect(file.services[0].pause?.billingStopsAt).toBe('next-billing-date');
+  });
+
+  it('refuses a billingStopsAt it does not recognise', () => {
+    const pause = {
+      method: 'native-pause',
+      manageUrl: 'https://example.test/account',
+      maxPauseMonths: 2,
+      billingStopsAt: 'whenever',
+      costs: [],
+      verifiedOn: '2026-08-26',
+    };
+    expect(() =>
+      parseFamilyFile(withValid({ services: [{ ...valid.services[0], pause }] }), '/tmp/f.json'),
+    ).toThrow();
+  });
+
   it('rejects a native pause that does not say how long it may run', () => {
     const pause = {
       method: 'native-pause',

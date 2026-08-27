@@ -17,6 +17,7 @@ import { writeFileAtomic } from './atomic-write';
 import type { MockTable, MockTitleFixture } from './availability';
 import type {
   BillingCycle,
+  BillingStopsAt,
   CountryCode,
   Household,
   Interest,
@@ -75,6 +76,7 @@ const SHARING_POLICIES: SharingPolicy[] = ['household-only', 'extra-member', 'tw
 const BILLING_CYCLES: BillingCycle[] = ['monthly', 'annual'];
 const OFFER_KINDS: OfferKind[] = ['flatrate', 'rent', 'buy'];
 const PAUSE_METHODS: PauseMethod[] = ['native-pause', 'cancel-resubscribe', 'store-managed'];
+const BILLING_STOPS_AT: BillingStopsAt[] = ['immediately', 'next-billing-date'];
 const PAUSE_COSTS: PauseCost[] = [
   'downloads',
   'watch-list',
@@ -217,6 +219,12 @@ function pauseTerms(faults: Faults, where: string, value: unknown): PauseTerms |
   const manageUrl = faults.string(`${where}.manageUrl`, value.manageUrl);
   const verifiedOn = faults.date(`${where}.verifiedOn`, value.verifiedOn);
   const maxPauseMonths = faults.optionalNumber(`${where}.maxPauseMonths`, value.maxPauseMonths);
+  // Optional, and absent stays absent. A default here would turn "nobody checked"
+  // into a claim about when the money stops.
+  const billingStopsAt =
+    value.billingStopsAt === undefined
+      ? undefined
+      : faults.oneOf(`${where}.billingStopsAt`, value.billingStopsAt, BILLING_STOPS_AT);
 
   // An explicit empty list means the walkthrough found nothing lost. Omitting it
   // would make "nobody checked" and "nothing is lost" the same value.
@@ -237,6 +245,7 @@ function pauseTerms(faults: Faults, where: string, value: unknown): PauseTerms |
   if (!method || !manageUrl || !verifiedOn) return undefined;
   const terms: PauseTerms = { method, manageUrl, costs, verifiedOn };
   if (maxPauseMonths !== undefined) terms.maxPauseMonths = maxPauseMonths;
+  if (billingStopsAt !== undefined) terms.billingStopsAt = billingStopsAt;
   return terms;
 }
 
