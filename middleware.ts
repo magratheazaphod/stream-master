@@ -31,10 +31,24 @@ import { SESSION_COOKIE, configErrorMessage, configProblems } from '@/lib/auth/c
 import { verifySession } from '@/lib/auth/session';
 
 /** Routes reachable without a session. Kept short and enumerated by hand. */
-const PUBLIC_PATHS = new Set(['/signin', '/api/auth']);
+const PUBLIC_PATHS = new Set([
+  '/signin',
+  '/api/auth',
+  // The install identity: what a phone reads to put this on a home screen. The
+  // manifest fetch is uncredentialed by default, so behind the gate it took a
+  // redirect to /signin, the phone saw no valid manifest and drew a letter tile
+  // instead of the owl. These carry a name, a colour and a bird - the gate
+  // exists to protect what the family pays for, and none of that is here.
+  '/manifest.webmanifest',
+  '/icon.svg',
+  '/apple-icon.png',
+]);
 
-function isPublic(pathname: string): boolean {
-  return PUBLIC_PATHS.has(pathname);
+/** The rendered home-screen icons. Public for the same reason the manifest is. */
+const PUBLIC_PREFIXES = ['/icons/'];
+
+export function isPublic(pathname: string): boolean {
+  return PUBLIC_PATHS.has(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
 function isApi(pathname: string): boolean {

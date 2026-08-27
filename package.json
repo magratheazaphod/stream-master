@@ -15,7 +15,8 @@
     "db:import": "tsx scripts/import-family.mts",
     "pause:sync": "tsx scripts/pause-sync.mts",
     "prd:snapshot": "sh scripts/snapshot-prd.sh",
-    "env:fix": "node scripts/escape-env.mjs"
+    "env:fix": "node scripts/escape-env.mjs",
+    "icons": "node scripts/render-icons.mjs"
   },
   "dependencies": {
     "next": "^15.5.4",
