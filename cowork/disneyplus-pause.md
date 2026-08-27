@@ -20,10 +20,15 @@ to `disneyplus.com/commerce/...` and render:
 
 Neither redirected to a sign-in page, so this is an authenticated failure rather
 than a missing session - a signed-out account gets the login wall instead, the way
-Hulu did. Whether the cause is a transient Disney outage, or an account whose
-billing lives with a third party that Disney's own commerce surface cannot render,
-is **unknown**. Two URLs were tried and the walk stopped there rather than
-grinding.
+Hulu did.
+
+**Jesse reproduced the same error by hand, in his own browser, starting over from
+scratch.** So it is not an artifact of automation, a stale tab or a session the
+agent broke. Disney's account surface is failing for this account, full stop.
+
+Whether the cause is a transient Disney outage, or an account whose billing lives
+with a third party that Disney's own commerce surface cannot render, is
+**unknown**. Two URLs were tried and the walk stopped there rather than grinding.
 
 So the manage URL is not merely unverified, it is **known not to work today**. An
 agent sent to it lands on an error page with no controls, which is `blocked` and
