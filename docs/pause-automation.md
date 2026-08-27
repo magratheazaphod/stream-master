@@ -122,6 +122,7 @@ Both live in `data/`, which is gitignored. They hold real household state.
       "manageUrl": "https://www.netflix.com/cancelplan",
       "approved": true,
       "approvedAt": "2026-08-26T14:01:44Z",
+      "approvedBy": "Peter",
       "resumeBy": "2026-11-01",
       "notes": "Annual term, forfeits four months."
     }
@@ -136,6 +137,15 @@ and tells the playbook which flow to walk.
 `approved` is not exactly `true`. Execution runs unattended; the decision does not.
 Cowork's `approvedPermissions` are sticky and persist across runs, so without this
 field a scheduled run could cancel a subscription nobody chose to cancel.
+
+**`approvedBy` names the person and never gates anything.** It is optional, so a
+queue file written before it existed parses unchanged and a request from somebody
+who skipped the person picker simply omits it. Four households share one password,
+so the name records who said they pressed the button rather than who provably did.
+For an irreversible action an unattended agent executes, that is still worth more
+than an anonymous `true`. A playbook reads it for its run summary and for nothing
+else: `approved` remains the only gate, and a request carrying a name with
+`approved` false is skipped exactly as before.
 
 ### `data/pause-results.json` - Cowork writes, the app reads
 

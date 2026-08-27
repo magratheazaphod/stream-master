@@ -28,6 +28,7 @@ import {
   subscriptions,
   titles,
 } from '../demo-data';
+import { withAddition, type CatalogAddition } from '../family-add';
 import {
   parseFamilyFile,
   withSubscriptionStatus,
@@ -45,6 +46,8 @@ import {
 import type { Subscription } from '../types';
 import {
   DEFAULT_COUNTRY,
+  DEMO_IS_READ_ONLY,
+  type AddWriteResult,
   type CatalogStore,
   type LoadedCatalog,
   type PauseSnapshot,
@@ -147,6 +150,28 @@ export function setSubscriptionStatusInFile(
   };
 }
 
+/**
+ * Add a household, a person, a service or a subscription to the private file.
+ *
+ * The whole dataset goes through `withAddition`, which checks it with the same
+ * function that guards every read, and then through `writeFamilyFile`, which
+ * checks it twice more and swaps the bytes in atomically. Three checks for one
+ * new row is not excessive: the row is being written by somebody who has never
+ * seen this file, and the file is the family's spend record.
+ */
+export function addToFile(
+  addition: CatalogAddition,
+  path: string = FAMILY_DATA_PATH,
+): AddWriteResult {
+  const loaded = loadCatalogFromFile(path);
+  if (loaded.source === 'demo') throw new Error(DEMO_IS_READ_ONLY);
+
+  const file = parseFamilyFile(readFileSync(path, 'utf8'), path);
+  const { file: next, added } = withAddition(file, addition);
+  writeFamilyFile(path, next);
+  return { source: 'private', added };
+}
+
 /** The in-memory equivalent, for the demo dataset the app may not write to. */
 export function applyToRow(sub: Subscription, change: SubscriptionStatusChange): Subscription {
   const { status: _s, pausedOn: _p, resumeBy: _r, ...rest } = sub;
@@ -181,6 +206,10 @@ export class FileCatalogStore implements CatalogStore {
 
   async setSubscriptionStatus(change: SubscriptionStatusChange): Promise<StatusWriteResult> {
     return setSubscriptionStatusInFile(change, this.familyPath);
+  }
+
+  async addToCatalog(addition: CatalogAddition): Promise<AddWriteResult> {
+    return addToFile(addition, this.familyPath);
   }
 
   async queuePauseRequest(request: PauseRequest): Promise<void> {

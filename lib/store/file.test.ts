@@ -128,6 +128,72 @@ describe('the file store', () => {
     expect(snapshot.requests[0].request.action).toBe('resume');
   });
 
+  /**
+   * Who approved a pause, carried through the file the agent reads.
+   *
+   * Optional both ways, and it has to be: a queue written before the field
+   * existed still parses, and somebody who skipped the person picker still gets
+   * to pause their own subscription. `approved` stays the only gate.
+   */
+  it('carries the approving person through the queue file, and copes without one', async () => {
+    await store().queuePauseRequest(request({ approvedBy: 'Peter' }));
+    expect((await store().pauseSnapshot()).requests[0].request.approvedBy).toBe('Peter');
+
+    await store().queuePauseRequest(request({ id: 'req-anon' }));
+    const anon = (await store().pauseSnapshot()).requests.find((r) => r.request.id === 'req-anon')!;
+    expect(anon.request.approvedBy).toBeUndefined();
+    expect(anon.request.approved).toBe(true);
+  });
+
+  /* -- adding data ---------------------------------------------------------- */
+
+  // The fixture is compiled into the bundle. A form that appears to work and
+  // keeps nothing is the one outcome this product cannot afford, so the store
+  // refuses in words rather than conjuring a data/family.json nobody meant.
+  it('refuses to add to the demo dataset, and creates no file doing it', async () => {
+    await expect(
+      store().addToCatalog({ kind: 'person', name: 'Peter', householdId: 'h1' }),
+    ).rejects.toThrow(/demo data/);
+    await expect(store().load()).resolves.toMatchObject({ source: 'demo' });
+  });
+
+  it('adds a person to the private file', async () => {
+    writeFileSync(familyPath, JSON.stringify(family));
+    const result = await store().addToCatalog({
+      kind: 'person',
+      name: 'Peter',
+      householdId: 'h1',
+    });
+    expect(result).toMatchObject({ source: 'private', added: { people: ['p-peter'] } });
+    const reloaded = await store().load();
+    expect(reloaded.catalog.people.map((p) => p.name)).toEqual(['Real Person', 'Peter']);
+  });
+
+  it('adds a service with no pause terms, so no button is offered for it', async () => {
+    writeFileSync(familyPath, JSON.stringify(family));
+    await store().addToCatalog({
+      kind: 'service',
+      name: 'Britbox',
+      monthlyPrice: '$8.99',
+      sharingPolicy: 'household-only',
+    });
+    const service = (await store().load()).catalog.services.find((s) => s.id === 'svc-britbox')!;
+    expect(service.monthlyPrice).toBe(8.99);
+    expect(service.pause).toBeUndefined();
+  });
+
+  // The refusal leaves the file exactly as it was, which is the same guarantee
+  // the atomic status write makes.
+  it('leaves the file untouched when it refuses an addition', async () => {
+    writeFileSync(familyPath, JSON.stringify(family));
+    const before = await store().load();
+    await expect(
+      store().addToCatalog({ kind: 'person', name: 'Ghost', householdId: 'h-nowhere' }),
+    ).rejects.toThrow();
+    const after = await store().load();
+    expect(after.catalog.people).toEqual(before.catalog.people);
+  });
+
   it('reports an empty snapshot rather than throwing on a broken queue file', async () => {
     writeFileSync(queuePath, 'not a queue at all');
     await expect(store().pauseSnapshot()).resolves.toEqual({ requests: [], results: [] });

@@ -8,7 +8,9 @@
  * screen is not allowed to imply the second from the first.
  */
 
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { PERSON_COOKIE, resolvePerson } from '@/lib/identity';
 import { getStore } from '@/lib/store';
 import { pauseStateFrom } from '@/lib/store/pause-state';
 import { EPHEMERAL_WRITE_MESSAGE, isEphemeralFilesystem } from '@/lib/deployment';
@@ -152,6 +154,12 @@ export async function POST(request: Request) {
     approved: true,
     approvedAt: now.toISOString(),
   };
+  // Who said yes, where anybody said who they were. Attribution and not proof -
+  // everybody shares one password - but a cancellation an unattended agent
+  // executes should carry a name rather than an anonymous true. Absent when the
+  // person picker was skipped, and absent is honest.
+  const approver = resolvePerson((await cookies()).get(PERSON_COOKIE)?.value, catalog.people);
+  if (approver) queued.approvedBy = approver.name;
   if (action === 'pause' && written.subscription.resumeBy) {
     queued.resumeBy = written.subscription.resumeBy;
   }

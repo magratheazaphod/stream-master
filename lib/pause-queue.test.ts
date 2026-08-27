@@ -49,9 +49,38 @@ describe('reading the queue', () => {
     writeFileSync(queuePath, '{"version":1}');
     expect(() => readQueue(queuePath)).toThrow(/not a pause queue/);
   });
+
+  /**
+   * `approvedBy` arrived after the contract shipped, so a queue written without
+   * it has to keep working. Cowork's file contract is a contract: a field added
+   * on this side must never turn an older file into a parse error.
+   */
+  it('reads a queue written before approvedBy existed', () => {
+    const older = { ...request() } as Record<string, unknown>;
+    writeFileSync(
+      queuePath,
+      JSON.stringify({ version: 1, writtenAt: '2026-08-20T00:00:00Z', requests: [older] }),
+    );
+    const read = readQueue(queuePath);
+    expect(read.requests[0].approvedBy).toBeUndefined();
+    expect(read.requests[0].approved).toBe(true);
+  });
 });
 
 describe('writing the queue', () => {
+  // Attribution and not proof: everybody shares one password, so the name says
+  // who claimed the decision. It never touches `approved`, which stays the gate.
+  it('carries the approving person without gating on them', () => {
+    appendRequest(request({ approvedBy: 'Peter' }), queuePath);
+    const written = JSON.parse(readFileSync(queuePath, 'utf8')) as { requests: PauseRequest[] };
+    expect(written.requests[0].approvedBy).toBe('Peter');
+
+    appendRequest(request({ id: 'req-anon' }), queuePath);
+    const both = readQueue(queuePath).requests;
+    expect(both.find((r) => r.id === 'req-anon')!.approvedBy).toBeUndefined();
+    expect(both.every((r) => r.approved === true)).toBe(true);
+  });
+
   it('writes the contract shape Cowork reads', () => {
     appendRequest(request(), queuePath, new Date('2026-08-26T14:02:00Z'));
     const written = JSON.parse(readFileSync(queuePath, 'utf8'));
