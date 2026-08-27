@@ -19,6 +19,15 @@
  *   2. One client per process, reused. A serverless function that opens a
  *      connection per request exhausts the pool the free plan gives us long
  *      before it exhausts anything else.
+ *   3. Never let concurrent queries exceed `max`. Going over does not merely
+ *      queue - it wedges the pool for the life of the process. The first burst
+ *      succeeds, the overflow queue never drains, and every later query hangs
+ *      until something upstream times out. `load()` fanning ten queries across
+ *      a pool of five is what took the app down: sign-in worked, because it
+ *      touches no database, and every page behind it hung for 300 seconds.
+ *      Reproduced 6 in 6 on a bare `select 1`, never once within `max`. Run a
+ *      fan-out wider than a handful inside `sql.begin`, which reserves one
+ *      connection and cannot overflow.
  */
 
 import postgres, { type Sql } from 'postgres';

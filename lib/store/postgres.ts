@@ -55,8 +55,40 @@ export class PostgresCatalogStore implements CatalogStore {
   }
 
   async load(): Promise<LoadedCatalog> {
-    const sql = this.sql;
+    /**
+     * One transaction, and it buys two separate things.
+     *
+     * The first is a consistent snapshot. These ten reads describe one family,
+     * and `db:import` deletes and re-inserts rather than updating in place, so
+     * ten independently-timed statements can straddle it and assemble a
+     * catalogue out of two different moments. That assembly then fails the
+     * checker with faults that contradict each other - subscriptions naming
+     * households the households query no longer returned. `repeatable read`
+     * gives every statement here the same snapshot, so the assembled shape is
+     * one the database actually held.
+     *
+     * The second is a bound on concurrency. `Promise.all` over ten queries on a
+     * pool of five wedges the pool permanently: the first request succeeds, the
+     * overflow queue never drains, and every later request on that warm
+     * instance hangs until the platform times it out at 300 seconds. Reproduced
+     * 6 times in 6 against the hosted pooler on a bare `select 1`, and never
+     * once when in-flight queries stayed within `max`. A transaction reserves a
+     * single connection and runs these statements down it, so the fan-out
+     * cannot exceed the pool however many queries this list grows to.
+     *
+     * The reads stay in one `Promise.all` because postgres.js pipelines them
+     * down that connection: they are issued together and the round trips
+     * overlap. One connection is measurably faster than five were - a warm load
+     * went from 475ms to 160ms - because the five spent their time contending
+     * for the pool rather than waiting on Postgres.
+     */
+    return this.sql.begin('isolation level repeatable read', async (sql) => {
+      return this.loadWithin(sql as unknown as Sql);
+    }) as Promise<LoadedCatalog>;
+  }
 
+  /** The reads and the assembly, given a connection that holds the snapshot. */
+  private async loadWithin(sql: Sql): Promise<LoadedCatalog> {
     const [
       settings,
       households,
