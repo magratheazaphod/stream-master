@@ -31,6 +31,18 @@ export interface Row {
   mine?: boolean;
   /** Who asked for the pause, where anybody said who they were. */
   approvedBy?: string;
+  /** Who raised the request, and from which household. The rule turns on the household. */
+  requestedBy?: string;
+  requestedHousehold?: string;
+  /**
+   * What the live request is about.
+   *
+   * Not derivable from `status`. A pause waiting on a second household leaves the
+   * row reading active, and an approved pause leaves it reading paused - so
+   * deriving the action from the status would send "resume" when undoing a
+   * pause, and the undo would set the row the wrong way.
+   */
+  pendingAction?: 'pause' | 'resume';
 }
 
 const usd = (n: number) =>
@@ -120,6 +132,61 @@ function whatTheButtonDoes(row: Row): string | null {
   }
 }
 
+/**
+ * What this viewer's press will do, given where the request has got to.
+ *
+ * Three presses and never two, because the middle one is the whole feature: one
+ * household proposes, a different household agrees, and only then is there
+ * anything an agent could act on. `null` means this viewer has no press to make
+ * and the button is not offered - a request cannot be approved by the household
+ * that raised it, and nothing can be called back once an agent holds it.
+ */
+type Press =
+  | { intent: 'request'; label: string }
+  | { intent: 'approve'; label: string }
+  | { intent: 'withdraw'; label: string };
+
+function pressFor(row: Row, viewerHousehold: string | undefined): Press | null {
+  if (row.progress === 'awaiting-approval') {
+    // The household that asked may take it back. Anybody else may agree to it.
+    if (!viewerHousehold) return null;
+    if (row.requestedHousehold === viewerHousehold) {
+      return { intent: 'withdraw', label: 'Take the request back' };
+    }
+    return { intent: 'approve', label: `Approve, and ${verb(row).toLowerCase()}` };
+  }
+
+  // Approved and nobody has taken it yet. This is the undo window, and it closes
+  // the moment the sync job hands the job to an agent.
+  if (row.progress === 'requested') {
+    return { intent: 'withdraw', label: `${gerund(row)} - tap to undo` };
+  }
+
+  // In flight, or finished, or blocked. Nothing for a button to do.
+  if (row.progress === 'in-flight' || row.progress === 'confirmed') return null;
+
+  return { intent: 'request', label: actionLabel(row) };
+}
+
+/** The verb for what is being asked, in the row's own vocabulary. */
+function verb(row: Row): string {
+  return actionLabel(row);
+}
+
+/** The same act, in progress. */
+function gerund(row: Row): string {
+  if (row.status === 'paused') return 'Restarting';
+  switch (row.pauseMethod) {
+    case 'native-pause':
+      return 'Pausing';
+    case 'cancel-resubscribe':
+    case 'store-managed':
+      return 'Cancelling';
+    default:
+      return 'Stopping';
+  }
+}
+
 function statusPill(row: Row) {
   if (row.status === 'active') {
     return <span className="pill covered"><i className="dot good" />Live</span>;
@@ -131,6 +198,12 @@ function statusPill(row: Row) {
     // the database until the sync job on Jesse's Mac picks it up, and if the Mac
     // is asleep it lives there for hours. Saying "with the agent" while nothing
     // can see it would imply somebody is standing by when nobody is.
+    case 'awaiting-approval':
+      return (
+        <span className="pill unsure">
+          <i className="dot unsure" />Waiting on a second household
+        </span>
+      );
     case 'requested':
       return <span className="pill unsure"><i className="dot unsure" />Requested, not picked up</span>;
     case 'in-flight':
@@ -150,26 +223,31 @@ export function Subscriptions({
   initialRows,
   dataset,
   viewerName,
+  viewerHousehold,
 }: {
   initialRows: Row[];
   dataset: DatasetSource;
   /** The person picked on this browser, if anybody was. Ordering and wording. */
   viewerName?: string;
+  /** The viewer's household. Approval turns on it, so the button text does too. */
+  viewerHousehold?: string;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [busy, setBusy] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
-  async function toggle(row: Row) {
-    const action = row.status === 'active' ? 'pause' : 'resume';
+  async function toggle(row: Row, press: Press) {
+    // A live request already says what it is about. Only a fresh proposal reads
+    // the action off the row, and only then is the row's status the right source.
+    const action = row.pendingAction ?? (row.status === 'active' ? 'pause' : 'resume');
     setBusy(row.id);
     setError(null);
     try {
       const res = await fetch('/api/subscriptions', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ subscriptionId: row.id, action }),
+        body: JSON.stringify({ subscriptionId: row.id, action, intent: press.intent }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -186,6 +264,9 @@ export function Subscriptions({
                 progress: body.pause.progress,
                 evidence: body.pause.result?.evidence,
                 approvedBy: body.pause.request?.approvedBy,
+                requestedBy: body.pause.request?.requestedBy,
+                requestedHousehold: body.pause.request?.requestedHousehold,
+                pendingAction: body.pause.request?.action,
               }
             : r,
         ),
@@ -255,6 +336,18 @@ export function Subscriptions({
               {row.status === 'paused' && row.resumeBy && (
                 <div className="because dim">Due back {row.resumeBy}</div>
               )}
+              {row.progress === 'awaiting-approval' && (
+                <div className="because dim">
+                  {row.requestedBy ?? 'Somebody'}
+                  {row.requestedHousehold ? ` of ${row.requestedHousehold}` : ''} asked for
+                  this.{' '}
+                  {!viewerHousehold
+                    ? 'Say who you are to agree to it or take it back.'
+                    : row.requestedHousehold === viewerHousehold
+                      ? 'Somebody from another household has to agree before anything happens.'
+                      : 'Nothing has been sent anywhere yet. Agreeing is what starts it.'}
+                </div>
+              )}
               {row.progress === 'requested' && (
                 <div className="because dim">
                   Waiting for the Mac that runs the agent. Nothing happens until it wakes
@@ -288,24 +381,41 @@ export function Subscriptions({
                 {usd(row.monthlyCost)}
                 <span className="dim"> /mo</span>
               </div>
-              <button
-                type="button"
-                className={`btn ${row.status === 'active' ? '' : 'off'}`}
-                onClick={() => toggle(row)}
-                disabled={busy === row.id}
-              >
-                {busy === row.id ? 'Working' : actionLabel(row)}
-              </button>
+              {(() => {
+                const press = pressFor(row, viewerHousehold);
+                if (!press) return null;
+                if (!viewerHousehold && press.intent === 'request') {
+                  return (
+                    <span className="dim">Pick who you are to change this</span>
+                  );
+                }
+                return (
+                  <button
+                    type="button"
+                    className={`btn ${press.intent === 'request' && row.status === 'active' ? '' : 'off'}`}
+                    onClick={() => toggle(row, press)}
+                    disabled={busy === row.id}
+                  >
+                    {busy === row.id ? 'Working' : press.label}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         ))}
       </div>
 
       <p className="note">
-        Turning a subscription off records the decision and queues the job for Claude
-        Cowork, which walks the provider&apos;s flow in a signed-in browser. Nothing here
-        reads as stopped until Cowork comes back with the confirmation it read on the
-        page.
+        Stopping or restarting a subscription takes two households. One asks, somebody
+        from a different household agrees, and only then is the job queued for Claude
+        Cowork, which walks the provider&apos;s flow in a signed-in browser. Until an
+        agent picks it up you can still take it back. Nothing here reads as stopped
+        until Cowork comes back with the confirmation it read on the page.
+      </p>
+      <p className="note">
+        The rule is there to stop a slip, not a person: everybody shares one password
+        and the name you pick is the name you chose, so it records who said they
+        pressed the button rather than who provably did.
       </p>
     </section>
   );

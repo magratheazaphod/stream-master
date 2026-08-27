@@ -37,6 +37,7 @@ import {
 } from '../family-file';
 import {
   appendRequest,
+  removeRequest,
   readQueue,
   readResults,
   PAUSE_QUEUE_PATH,
@@ -214,6 +215,10 @@ export class FileCatalogStore implements CatalogStore {
 
   async queuePauseRequest(request: PauseRequest): Promise<void> {
     appendRequest(request, this.queuePath);
+  }
+
+  async withdrawPauseRequest(requestId: string): Promise<void> {
+    removeRequest(requestId, this.queuePath);
   }
 
   async pauseSnapshot(): Promise<PauseSnapshot> {
