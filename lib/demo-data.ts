@@ -92,12 +92,17 @@ export const services: Service[] = [
     pause: {
       method: 'native-pause',
       manageUrl: 'https://secure.hulu.com/account',
-      // The provider states the ceiling in weeks, so three months is the floor of
-      // twelve weeks, not a round number somebody chose. Rounding it up would
-      // produce a resume date the provider will not honour.
-      maxPauseMonths: 3,
+      // Hulu states its ceiling in weeks: twelve, which is 84 days. This field
+      // counts whole months and three months is about 91, so three overstates
+      // the limit and produces a resume date Hulu will not honour. Two is the
+      // floor, and losing four eligible days is the cheap error.
+      maxPauseMonths: 2,
+      // "...for up to 12 weeks beginning on your next billing date." Pressing the
+      // button stops nothing today, which is the sharpest divergence from every
+      // other flow walked so far.
+      billingStopsAt: 'next-billing-date',
       costs: [],
-      verifiedOn: '2026-07-19',
+      verifiedOn: '2026-08-26',
     },
   },
   {

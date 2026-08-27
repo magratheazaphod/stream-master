@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { PauseProgress } from '@/lib/pause-queue';
 import type { DatasetSource } from '@/lib/catalog';
-import type { PauseCost, SubscriptionStatus } from '@/lib/types';
+import type { BillingStopsAt, PauseCost, PauseMethod, SubscriptionStatus } from '@/lib/types';
 
 /** One subscription, flattened for the client. Everything the row renders. */
 export interface Row {
@@ -21,6 +21,12 @@ export interface Row {
   /** False when nobody has walked this provider's stop-billing flow. */
   hasTerms: boolean;
   pauseCosts: PauseCost[];
+  /** How this provider stops billing. Absent when nobody has walked the flow. */
+  pauseMethod?: PauseMethod;
+  /** Ceiling on a native pause, in months. Native pause only. */
+  maxPauseMonths?: number;
+  /** When the money stops. Absent is unknown, and the screen then says nothing. */
+  billingStopsAt?: BillingStopsAt;
   /** True when the person picked on this browser is the payer. Ordering only. */
   mine?: boolean;
   /** Who asked for the pause, where anybody said who they were. */
@@ -46,6 +52,74 @@ const COST_LABEL: Record<PauseCost, string> = {
  * says requested, blocked or failed, because the whole product rests on never
  * telling a family they saved money they did not save.
  */
+/**
+ * What the button says, and it is not cosmetic.
+ *
+ * A native pause and a cancellation are different acts with different costs, and
+ * the old screen called both of them "Turn off". Hulu can genuinely suspend
+ * billing and hand the account back untouched; Netflix has no pause at all, so
+ * stopping means cancelling and coming back means re-subscribing, at whatever
+ * price is on sale that day. Offering one word for both invites somebody to
+ * cancel a subscription believing they parked it.
+ */
+function actionLabel(row: Row): string {
+  if (row.status === 'paused') {
+    switch (row.pauseMethod) {
+      case 'native-pause':
+        return 'Resume';
+      case 'cancel-resubscribe':
+        return 'Re-subscribe';
+      default:
+        return 'Turn back on';
+    }
+  }
+  switch (row.pauseMethod) {
+    case 'native-pause':
+      return 'Pause';
+    case 'cancel-resubscribe':
+      return 'Cancel';
+    case 'store-managed':
+      return 'Cancel in the store';
+    default:
+      return 'Turn off';
+  }
+}
+
+/**
+ * The sentence under an active row that says what the button will actually do.
+ *
+ * Every clause here comes from a walkthrough somebody wrote down, never from the
+ * method name. `maxPauseMonths` is quoted as a floor rather than a ceiling
+ * because that is how it is recorded: Hulu's real limit is 12 weeks and the
+ * model counts whole months, so the stored 2 deliberately understates it. Saying
+ * "at least" keeps the app on the safe side of a date the provider must honour.
+ */
+function whatTheButtonDoes(row: Row): string | null {
+  if (row.status !== 'active' || !row.hasTerms) return null;
+
+  const when =
+    row.billingStopsAt === 'next-billing-date'
+      ? 'Billing stops at the next billing date, not today, so this keeps working until then.'
+      : row.billingStopsAt === 'immediately'
+        ? 'Billing stops straight away.'
+        : null;
+
+  switch (row.pauseMethod) {
+    case 'native-pause': {
+      const ceiling = row.maxPauseMonths
+        ? ` The account survives, and it comes back on its own after at least ${row.maxPauseMonths} ${row.maxPauseMonths === 1 ? 'month' : 'months'}.`
+        : ' The account survives.';
+      return `${when ?? 'A real pause, not a cancellation.'}${ceiling}`;
+    }
+    case 'cancel-resubscribe':
+      return `${row.serviceName} sells no pause, so this cancels. Coming back means re-subscribing at whatever the price is then.${when ? ` ${when}` : ''}`;
+    case 'store-managed':
+      return `Billed through a store, so an agent stops it from the store account rather than from ${row.serviceName}.${when ? ` ${when}` : ''}`;
+    default:
+      return null;
+  }
+}
+
 function statusPill(row: Row) {
   if (row.status === 'active') {
     return <span className="pill covered"><i className="dot good" />Live</span>;
@@ -193,6 +267,9 @@ export function Subscriptions({
               {row.status === 'paused' && row.evidence && (
                 <div className="because dim">{row.evidence}</div>
               )}
+              {whatTheButtonDoes(row) && (
+                <div className="because dim">{whatTheButtonDoes(row)}</div>
+              )}
               {row.status === 'active' && row.pauseCosts.length > 0 && (
                 <div className="cost">
                   Pausing costs you: {row.pauseCosts.map((c) => COST_LABEL[c]).join(', ')}.
@@ -217,11 +294,7 @@ export function Subscriptions({
                 onClick={() => toggle(row)}
                 disabled={busy === row.id}
               >
-                {busy === row.id
-                  ? 'Working'
-                  : row.status === 'active'
-                    ? 'Turn off'
-                    : 'Turn back on'}
+                {busy === row.id ? 'Working' : actionLabel(row)}
               </button>
             </div>
           </div>

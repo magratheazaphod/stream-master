@@ -18,28 +18,10 @@ import { hasDatabase } from '@/lib/store/db';
 import { requestId, type PauseRequest, type PauseState } from '@/lib/pause-queue';
 import type { PauseAction } from '@/lib/pause-queue';
 import type { Subscription } from '@/lib/types';
+import { isoDay, resumeByFor } from '@/lib/pause-dates';
 
 /** The dataset changes under the app, so nothing on this route may be cached. */
 export const dynamic = 'force-dynamic';
-
-/**
- * How long a pause runs before the app asks for it back.
- *
- * The app owns this date rather than leaving it open, because a pause nobody
- * lifts is how a household loses a show mid-season, and that failure costs more
- * trust than the subscription costs money. A provider that sells a shorter
- * native pause wins: promising four months on a two-month pause is a promise the
- * provider will break on the family's behalf.
- */
-const DEFAULT_PAUSE_MONTHS = 3;
-
-const iso = (d: Date) => d.toISOString().slice(0, 10);
-
-function addMonths(from: Date, months: number): Date {
-  const d = new Date(from);
-  d.setMonth(d.getMonth() + months);
-  return d;
-}
 
 export interface ToggleResponse {
   subscription: Subscription;
@@ -87,7 +69,7 @@ export async function POST(request: Request) {
   const service = catalog.services.find((s) => s.id === sub.serviceId)!;
   const household = catalog.households.find((h) => h.id === sub.householdId)!;
   const now = new Date();
-  const today = iso(now);
+  const today = isoDay(now);
 
   let written;
   try {
@@ -97,7 +79,7 @@ export async function POST(request: Request) {
             subscriptionId,
             status: 'paused',
             pausedOn: today,
-            resumeBy: iso(addMonths(now, service.pause?.maxPauseMonths ?? DEFAULT_PAUSE_MONTHS)),
+            resumeBy: resumeByFor(sub, service.pause, now),
           }
         : { subscriptionId, status: 'active' },
     );

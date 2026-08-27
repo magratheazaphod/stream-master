@@ -10,7 +10,7 @@
     { "id": "p-2", "name": "Second Person", "householdId": "h-1" },
     { "id": "p-3", "name": "Third Person", "householdId": "h-2" }
   ],
-  "_pause": "The pause block on a service is what somebody recorded by walking that provider's flow by hand. Leave it out until you have walked it: no block means the app offers no button, which is the honest answer. method is native-pause, cancel-resubscribe or store-managed. maxPauseMonths belongs to native-pause and nowhere else. costs lists what stopping loses beyond money, from downloads, watch-list, profiles, grandfathered-price and annual-term-forfeit, and an empty list means you checked and found nothing.",
+  "_pause": "The pause block on a service is what somebody recorded by walking that provider's flow by hand. Leave it out until you have walked it: no block means the app offers no button, which is the honest answer. method is native-pause, cancel-resubscribe or store-managed. maxPauseMonths belongs to native-pause and nowhere else, and it is a floor: a provider that states its ceiling in weeks gets rounded down, because a resume date the provider will not honour is the expensive error. billingStopsAt is immediately or next-billing-date and says when the money actually stops - leave it out until the walkthrough established it, because absent means nobody knows and must not read as immediately. costs lists what stopping loses beyond money, from downloads, watch-list, profiles, grandfathered-price and annual-term-forfeit, and an empty list means you checked and found nothing.",
   "services": [
     {
       "id": "s-a",

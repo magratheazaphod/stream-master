@@ -128,9 +128,11 @@ export class PostgresCatalogStore implements CatalogStore {
           method: string;
           manage_url: string;
           max_pause_months: number | null;
+          billing_stops_at: string | null;
           verified_on: string;
         }[]
-      >`select service_id, method, manage_url, max_pause_months, verified_on
+      >`select service_id, method, manage_url, max_pause_months, billing_stops_at,
+               verified_on
           from service_pause_terms`,
       sql<{ service_id: string; cost: string }[]>`
         select service_id, cost from service_pause_costs order by service_id, cost`,
@@ -209,6 +211,9 @@ export class PostgresCatalogStore implements CatalogStore {
                   ...(terms.max_pause_months === null
                     ? {}
                     : { maxPauseMonths: terms.max_pause_months }),
+                  ...(terms.billing_stops_at === null
+                    ? {}
+                    : { billingStopsAt: terms.billing_stops_at }),
                   costs: costsByService.get(s.id) ?? [],
                   verifiedOn: terms.verified_on,
                 },
